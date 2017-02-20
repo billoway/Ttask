@@ -1,0 +1,20 @@
+root = "./"
+thread = 8
+logger = nil
+harbor = 0
+address = "127.0.0.1:2526"
+master  = "127.0.0.1:2013"
+
+start = "web_main" --main script
+
+bootstrap = "snlua bootstrap"
+
+luaservice = root.."service/?.lua;"..root.."test/?.lua;"..root.."examples/?.lua;"..root.."mtask_web/web/?.lua"
+
+
+lualoader = "./mtask_web/web/loader.lua"
+-- preload = "./examples/preload.lua"	-- run preload.lua before every lua service run
+snax = root.."examples/?.lua;"..root.."test/?.lua"
+cpath = root.."cservice/?.so"
+-- daemon = "./mtask.pid"
+web_root = root.."examples/www"
