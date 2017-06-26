@@ -8,25 +8,30 @@
 #include <assert.h>
 #include <string.h>
 
+// mtask 服务编号的管理和分配
+
 #define DEFAULT_SLOT_SIZE 4
 #define MAX_SLOT_SIZE 0x40000000
-
+//服务名字和服务编号的对应结构
 struct handle_name {
 	char * name;
 	uint32_t handle;
 };
-
+// 存储handle与mtask_context的对应关系，是一个哈希表
+// 每个服务mtask_context都对应一个不重复的handle
+// 存储name和handle的对应关系
+// 通过handle便可获取mtask_context
 struct handle_storage {
-	struct rwlock lock;
+	struct rwlock lock; //读写锁
 
-	uint32_t harbor;
-	uint32_t handle_index;
-	int slot_size;
-	struct mtask_context ** slot;
+	uint32_t harbor;    //服务所属harbor  harbor用于不同主机间通信
+	uint32_t handle_index;//初始值为1，表示handle句柄起始值从1开始
+	int slot_size;       //hash 表空间大小，初始为DEFAULT_SLOT_SIZE
+	struct mtask_context ** slot;//mtask_context 表空间
 	
-	int name_cap;
-	int name_count;
-	struct handle_name *name;
+	int name_cap;   //handle_name容量，初始为2，这里 name_cap 与 slot_size 不一样的原因在于，不是每个 handle 都有name
+	int name_count;  //handle_name数量
+	struct handle_name *name;//handle_name表
 };
 
 static struct handle_storage *H = NULL;
@@ -238,9 +243,10 @@ mtask_handle_namehandle(uint32_t handle, const char *name) {
 
 	return ret;
 }
-
-void 
-mtask_handle_init(int harbor) {
+// 初始化一个 handle 就是初始化 handle_storage
+void
+mtask_handle_init(int harbor)
+{
 	assert(H==NULL);
 	struct handle_storage * s = mtask_malloc(sizeof(*H));
 	s->slot_size = DEFAULT_SLOT_SIZE;
@@ -250,8 +256,8 @@ mtask_handle_init(int harbor) {
 	rwlock_init(&s->lock);
 	// reserve 0 for system
 	s->harbor = (uint32_t) (harbor & 0xff) << HANDLE_REMOTE_SHIFT;
-	s->handle_index = 1;
-	s->name_cap = 2;
+	s->handle_index = 1;// handle句柄从1开始,0保留
+	s->name_cap = 2;    // 名字容量初始为2
 	s->name_count = 0;
 	s->name = mtask_malloc(s->name_cap * sizeof(struct handle_name));
 

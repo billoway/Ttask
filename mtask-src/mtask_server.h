@@ -3,10 +3,10 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-
-struct mtask_context;
-struct mtask_message;
-struct mtask_monitor;
+//mtask 主要功能，初始化组件、加载服务和通知服务
+struct mtask_context;//每一个服务对应的 mtask_ctx 结构 mtask上下文结构
+struct mtask_message;//mtask 内部消息结构
+struct mtask_monitor;// 监视的结构
 
 struct mtask_context * mtask_context_new(const char * name, const char * parm);
 void mtask_context_grab(struct mtask_context *);
@@ -22,7 +22,7 @@ void mtask_context_dispatchall(struct mtask_context * context);	// for mtask_err
 
 void mtask_context_endless(uint32_t handle);	// for monitor
 
-void mtask_globalinit(void);
+void mtask_globalinit(void);//初始化节点结构mtask_node G_NODE
 void mtask_globalexit(void);
 void mtask_initthread(int m);
 

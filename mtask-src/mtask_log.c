@@ -15,12 +15,12 @@ mtask_log_open(struct mtask_context * ctx, uint32_t handle) {
 	sprintf(tmp, "%s/%08x.log", logpath, handle);
 	FILE *f = fopen(tmp, "ab");
 	if (f) {
-		uint32_t starttime = mtask_gettime_fixsec();
-		uint32_t currenttime = mtask_gettime();
-		time_t ti = starttime + currenttime/100;
-		mtask_error(ctx, "Open log file %s", tmp);
-		fprintf(f, "open time: %u %s", currenttime, ctime(&ti));
-		fflush(f);
+        uint32_t starttime = mtask_start_time();
+        uint64_t currenttime = mtask_now();
+        time_t ti = starttime + currenttime/100;
+        mtask_error(ctx, "Open log file %s", tmp);
+        fprintf(f, "open time: %u %s", (uint32_t)currenttime, ctime(&ti));
+        fflush(f);
 	} else {
 		mtask_error(ctx, "Open log file %s fail", tmp);
 	}
@@ -30,7 +30,7 @@ mtask_log_open(struct mtask_context * ctx, uint32_t handle) {
 void
 mtask_log_close(struct mtask_context * ctx, FILE *f, uint32_t handle) {
 	mtask_error(ctx, "Close log file :%08x", handle);
-	fprintf(f, "close time: %u\n", mtask_gettime());
+    fprintf(f, "close time: %u\n", (uint32_t)mtask_now());
 	fclose(f);
 }
 
@@ -68,7 +68,7 @@ mtask_log_output(FILE *f, uint32_t source, int type, int session, void * buffer,
 	if (type == PTYPE_SOCKET) {
 		log_socket(f, buffer, sz);
 	} else {
-		uint32_t ti = mtask_gettime();
+        uint32_t ti = (uint32_t)mtask_now();
 		fprintf(f, ":%08x %d %d %u ", source, type, session, ti);
 		log_blob(f, buffer, sz);
 		fprintf(f,"\n");

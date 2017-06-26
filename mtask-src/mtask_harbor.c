@@ -27,7 +27,9 @@ mtask_harbor_message_isremote(uint32_t handle) {
 }
 
 void
-mtask_harbor_init(int harbor) {
+mtask_harbor_init(int harbor)
+{
+    // 高8位就是对应远程主机通信的 harbor
 	HARBOR = (unsigned int)harbor << HANDLE_REMOTE_SHIFT;
 }
 

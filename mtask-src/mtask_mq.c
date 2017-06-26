@@ -9,38 +9,40 @@
 #include <assert.h>
 #include <stdbool.h>
 
-#define DEFAULT_QUEUE_SIZE 64
-#define MAX_GLOBAL_MQ 0x10000
+#define DEFAULT_QUEUE_SIZE 64       //默认队列大小
+#define MAX_GLOBAL_MQ 0x10000       //最大的全局消息队列的大小 64K
 
 // 0 means mq is not in global mq.
 // 1 means mq is in global mq , or the message is dispatching.
 
-#define MQ_IN_GLOBAL 1
+#define MQ_IN_GLOBAL 1      //在全局队列中或者正在分发
 #define MQ_OVERLOAD 1024
 
+//消息队列结构
 struct message_queue {
-	struct spinlock lock;
-	uint32_t handle;
-	int cap;
-	int head;
-	int tail;
-	int release;
-	int in_global;
-	int overload;
-	int overload_threshold;
-	struct mtask_message *queue;
-	struct message_queue *next;
+    struct spinlock lock;
+    uint32_t handle;  //句柄
+    int cap;          //队列大小
+    int head;         //队列头
+    int tail;         //队列尾
+    int release;      //释放
+    int in_global;    //全局队列
+    int overload;
+    int overload_threshold;
+    struct mtask_message *queue; //存放具体消息的连续内存的指针
+    struct message_queue *next;  //下一个队列的指针
 };
 
+//全局消息队列链表 其中保存了非空的各个服务的消息队列message_queue
 struct global_queue {
-	struct message_queue *head;
-	struct message_queue *tail;
-	struct spinlock lock;
+    struct message_queue *head;
+    struct message_queue *tail;
+    struct spinlock lock;
 };
-
+//全局队列的指针变量
 static struct global_queue *Q = NULL;
-
-void 
+//消息队列挂在全局消息链表的尾部
+void
 mtask_globalmq_push(struct message_queue * queue) {
 	struct global_queue *q= Q;
 
@@ -207,13 +209,14 @@ mtask_mq_push(struct message_queue *q, struct mtask_message *message) {
 	
 	SPIN_UNLOCK(q)
 }
-
-void 
-mtask_mq_init() {
+//初始化全局消息队列 分配和初始struct global_queue内存结构
+void
+mtask_mq_init()
+{
 	struct global_queue *q = mtask_malloc(sizeof(*q));
 	memset(q,0,sizeof(*q));
 	SPIN_INIT(q);
-	Q=q;
+	Q = q;
 }
 
 void 

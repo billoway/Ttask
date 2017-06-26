@@ -16,26 +16,37 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <signal.h>
+//监控结构
 struct monitor {
-	int count;
-	struct mtask_monitor ** m;
-	pthread_cond_t cond;
-	pthread_mutex_t mutex;
-	int sleep;
+	int count;                  //工作线程数量
+	struct mtask_monitor ** m;  //monitor 工作线程监控列表
+	pthread_cond_t cond;        //条件变量
+	pthread_mutex_t mutex;      //互斥锁
+	int sleep;                  //睡眠中工作线程数量
 	int quit;
 };
-
+//工作线程参数
 struct worker_parm {
 	struct monitor *m;
 	int id;
 	int weight;
 };
 
+static int SIG = 0;
+
+static void
+handle_hup(int signal)
+{
+    if (signal == SIGHUP) {
+        SIG = 1;
+    }
+}
 #define CHECK_ABORT if (mtask_context_total()==0) break;
 
 static void
-create_thread(pthread_t *thread, void *(*start_routine) (void *), void *arg) {
+create_thread(pthread_t *thread, void *(*start_routine) (void *), void *arg)
+{
 	if (pthread_create(thread,NULL, start_routine, arg)) {
 		fprintf(stderr, "Create thread failed");
 		exit(1);
@@ -202,7 +213,7 @@ start(int thread) {
 
 static void
 bootstrap(struct mtask_context * logger, const char * cmdline) {
-	int sz = strlen(cmdline);
+	int sz = (int)strlen(cmdline);
 	char name[sz+1];
 	char args[sz+1];
 	sscanf(cmdline, "%s %s", name, args);
@@ -213,19 +224,27 @@ bootstrap(struct mtask_context * logger, const char * cmdline) {
 		exit(1);
 	}
 }
-
-void 
-mtask_start(struct mtask_config * config) {
+//mtask 启动 传入mtask_config结构体
+void
+mtask_start(struct mtask_config * config)
+{
+    // register SIGHUP for log file reopen
+    struct sigaction sa;
+    sa.sa_handler = &handle_hup;
+    sa.sa_flags = SA_RESTART;
+    sigfillset(&sa.sa_mask);
+    sigaction(SIGHUP, &sa, NULL);
+    
 	if (config->daemon) {
-		if (daemon_init(config->daemon)) {
+		if (daemon_init(config->daemon)) {//后台执行
 			exit(1);
 		}
 	}
-	mtask_harbor_init(config->harbor);
-	mtask_handle_init(config->harbor);
-	mtask_mq_init();
-	mtask_module_init(config->module_path);
-	mtask_timer_init();
+	mtask_harbor_init(config->harbor);//初始化节点 编号
+	mtask_handle_init(config->harbor);//初始化句柄 编号和mtask_context 初始化一个 handle 就是初始化 handle_storage H
+	mtask_mq_init();                       //初始化全局队列 Q
+	mtask_module_init(config->module_path);//初始化模块管理
+	mtask_timer_init();                    //初始化定时器
 	mtask_socket_init();
 
 	struct mtask_context *ctx = mtask_context_new(config->logservice, config->logger);

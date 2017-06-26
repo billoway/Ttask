@@ -21,6 +21,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+
+//mtask主要功能，初始化组件、加载服务和通知服务
+
 #ifdef CALLING_CHECK
 
 #define CHECKCALLING_BEGIN(ctx) if (!(spinlock_trylock(&ctx->calling))) { assert(0); }
@@ -38,29 +41,40 @@
 #define CHECKCALLING_DECL
 
 #endif
+/*
+ * 一个模块(.so)加载到mtask框架中，创建出来的一个实例就是一个服务，
+ * 为每个服务分配一个mtask_context结构
+ */
 
+//每一个服务对应的 mtask_ctx 结构 mtask上下文结构
 struct mtask_context {
-	void * instance;
-	struct mtask_module * mod;
-	void * cb_ud;
-	mtask_cb cb;
-	struct message_queue *queue;
+	void * instance;          //模块实例化句柄 模块xxx_create函数返回的实例 对应 模块的句柄
+	struct mtask_module * mod;//模块结构 保存模块（so）句柄和 函数指针
+	void * cb_ud;           //mtask_callback 设置的服务的lua_state
+	mtask_cb cb;            //mtask_callback 设置过来的消息处理回调函数
+	struct message_queue *queue; //消息队列
 	FILE * logfile;
-	char result[32];
-	uint32_t handle;
+    uint64_t cpu_cost;	// in microsec
+    uint64_t cpu_start;	// in microsec
+	char result[32];    //保存命令执行返回结果
+	uint32_t handle;    //服务的句柄
 	int session_id;
-	int ref;
-	bool init;
-	bool endless;
+	int ref;            //ref引用计数
+    int message_count;  //消息数量
+	bool init;          //是否实例化
+	bool endless;       //是否进入无尽循环
+    bool profile;
 
 	CHECKCALLING_DECL
 };
-
+//mtask 节点结构
 struct mtask_node {
-	int total;
+	int total; //节点服务总数
 	int init;
 	uint32_t monitor_exit;
-	pthread_key_t handle_key;
+	pthread_key_t handle_key;//线程局部存储数据 所有线程都可以使用它，而它的值在每一个线程中又是单独存储的
+    bool profile;	// default is off
+
 };
 
 static struct mtask_node G_NODE;
@@ -344,7 +358,7 @@ uint32_t
 mtask_queryname(struct mtask_context * context, const char * name) {
 	switch(name[0]) {
 	case ':':
-		return strtoul(name+1,NULL,16);
+		return (uint32_t)strtoul(name+1,NULL,16);
 	case '.':
 		return mtask_handle_findname(name + 1);
 	}
@@ -376,7 +390,7 @@ struct command_func {
 static const char *
 cmd_timeout(struct mtask_context * context, const char * param) {
 	char * session_ptr = NULL;
-	int ti = strtol(param, &session_ptr, 10);
+	int ti = (int)strtol(param, &session_ptr, 10);
 	int session = mtask_context_newsession(context);
 	mtask_timeout(context->handle, ti, session);
 	sprintf(context->result, "%d", session);
@@ -397,7 +411,8 @@ cmd_reg(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_query(struct mtask_context * context, const char * param) {
+cmd_query(struct mtask_context * context, const char * param)
+{
 	if (param[0] == '.') {
 		uint32_t handle = mtask_handle_findname(param+1);
 		if (handle) {
@@ -409,15 +424,16 @@ cmd_query(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_name(struct mtask_context * context, const char * param) {
-	int size = strlen(param);
+cmd_name(struct mtask_context * context, const char * param)
+{
+	int size = (int)strlen(param);
 	char name[size+1];
 	char handle[size+1];
 	sscanf(param,"%s %s",name,handle);
 	if (handle[0] != ':') {
 		return NULL;
 	}
-	uint32_t handle_id = strtoul(handle+1, NULL, 16);
+	uint32_t handle_id = (uint32_t)strtoul(handle+1, NULL, 16);
 	if (handle_id == 0) {
 		return NULL;
 	}
@@ -429,12 +445,6 @@ cmd_name(struct mtask_context * context, const char * param) {
 	return NULL;
 }
 
-static const char *
-cmd_now(struct mtask_context * context, const char * param) {
-	uint32_t ti = mtask_gettime();
-	sprintf(context->result,"%u",ti);
-	return context->result;
-}
 
 static const char *
 cmd_exit(struct mtask_context * context, const char * param) {
@@ -446,7 +456,7 @@ static uint32_t
 tohandle(struct mtask_context * context, const char * param) {
 	uint32_t handle = 0;
 	if (param[0] == ':') {
-		handle = strtoul(param+1, NULL, 16);
+		handle = (uint32_t)strtoul(param+1, NULL, 16);
 	} else if (param[0] == '.') {
 		handle = mtask_handle_findname(param+1);
 	} else {
@@ -507,20 +517,12 @@ cmd_setenv(struct mtask_context * context, const char * param) {
 
 static const char *
 cmd_starttime(struct mtask_context * context, const char * param) {
-	uint32_t sec = mtask_gettime_fixsec();
+	uint32_t sec = mtask_start_time();
 	sprintf(context->result,"%u",sec);
 	return context->result;
 }
 
-static const char *
-cmd_endless(struct mtask_context * context, const char * param) {
-	if (context->endless) {
-		strcpy(context->result, "1");
-		context->endless = false;
-		return context->result;
-	}
-	return NULL;
-}
+
 
 static const char *
 cmd_abort(struct mtask_context * context, const char * param) {
@@ -529,7 +531,8 @@ cmd_abort(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_monitor(struct mtask_context * context, const char * param) {
+cmd_monitor(struct mtask_context * context, const char * param)
+{
 	uint32_t handle=0;
 	if (param == NULL || param[0] == '\0') {
 		if (G_NODE.monitor_exit) {
@@ -546,11 +549,37 @@ cmd_monitor(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_mqlen(struct mtask_context * context, const char * param) {
-	int len = mtask_mq_length(context->queue);
-	sprintf(context->result, "%d", len);
-	return context->result;
+cmd_stat(struct mtask_context * context, const char * param)
+{
+    if (strcmp(param, "mqlen") == 0) {
+        int len = mtask_mq_length(context->queue);
+        sprintf(context->result, "%d", len);
+    } else if (strcmp(param, "endless") == 0) {
+        if (context->endless) {
+            strcpy(context->result, "1");
+            context->endless = false;
+        } else {
+            strcpy(context->result, "0");
+        }
+    } else if (strcmp(param, "cpu") == 0) {
+        double t = (double)context->cpu_cost / 1000000.0;	// microsec
+        sprintf(context->result, "%lf", t);
+    } else if (strcmp(param, "time") == 0) {
+        if (context->profile) {
+            uint64_t ti = mtask_thread_time() - context->cpu_start;
+            double t = (double)ti / 1000000.0;	// microsec
+            sprintf(context->result, "%lf", t);
+        } else {
+            strcpy(context->result, "0");
+        }
+    } else if (strcmp(param, "message") == 0) {
+        sprintf(context->result, "%d", context->message_count);
+    } else {
+        context->result[0] = '\0';
+    }
+    return context->result;
 }
+
 
 static const char *
 cmd_logon(struct mtask_context * context, const char * param) {
@@ -605,7 +634,7 @@ cmd_signal(struct mtask_context * context, const char * param) {
 	param = strchr(param, ' ');
 	int sig = 0;
 	if (param) {
-		sig = strtol(param, NULL, 0);
+		sig = (uint32_t)strtol(param, NULL, 0);
 	}
 	// NOTICE: the signal function should be thread safe.
 	mtask_module_instance_signal(ctx->mod, ctx->instance, sig);
@@ -615,24 +644,22 @@ cmd_signal(struct mtask_context * context, const char * param) {
 }
 
 static struct command_func cmd_funcs[] = {
-	{ "TIMEOUT", cmd_timeout },
-	{ "REG", cmd_reg },
-	{ "QUERY", cmd_query },
-	{ "NAME", cmd_name },
-	{ "NOW", cmd_now },
-	{ "EXIT", cmd_exit },
-	{ "KILL", cmd_kill },
-	{ "LAUNCH", cmd_launch },
-	{ "GETENV", cmd_getenv },
-	{ "SETENV", cmd_setenv },
-	{ "STARTTIME", cmd_starttime },
-	{ "ENDLESS", cmd_endless },
-	{ "ABORT", cmd_abort },
-	{ "MONITOR", cmd_monitor },
-	{ "MQLEN", cmd_mqlen },
-	{ "LOGON", cmd_logon },
-	{ "LOGOFF", cmd_logoff },
-	{ "SIGNAL", cmd_signal },
+    { "TIMEOUT", cmd_timeout },
+    { "REG", cmd_reg },
+    { "QUERY", cmd_query },
+    { "NAME", cmd_name },
+    { "EXIT", cmd_exit },
+    { "KILL", cmd_kill },
+    { "LAUNCH", cmd_launch },
+    { "GETENV", cmd_getenv },
+    { "SETENV", cmd_setenv },
+    { "STARTTIME", cmd_starttime },
+    { "ABORT", cmd_abort },
+    { "MONITOR", cmd_monitor },
+    { "STAT", cmd_stat },
+    { "LOGON", cmd_logon },
+    { "LOGOFF", cmd_logoff },
+    { "SIGNAL", cmd_signal },
 	{ NULL, NULL },
 };
 
@@ -760,9 +787,10 @@ mtask_context_send(struct mtask_context * ctx, void * msg, size_t sz, uint32_t s
 
 	mtask_mq_push(ctx->queue, &smsg);
 }
-
+//初始化mtask_node 创建线程局部存储key
 void 
-mtask_globalinit(void) {
+mtask_globalinit(void)
+{
 	G_NODE.total = 0;
 	G_NODE.monitor_exit = 0;
 	G_NODE.init = 1;
@@ -778,9 +806,10 @@ void
 mtask_globalexit(void) {
 	pthread_key_delete(G_NODE.handle_key);
 }
-
+ //设置线程局部存储key
 void
-mtask_initthread(int m) {
+mtask_initthread(int m)
+{
 	uintptr_t v = (uint32_t)(-m);
 	pthread_setspecific(G_NODE.handle_key, (void *)v);
 }

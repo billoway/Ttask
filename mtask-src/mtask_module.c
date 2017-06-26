@@ -160,12 +160,13 @@ mtask_module_instance_signal(struct mtask_module *m, void *inst, int signal) {
 		m->signal(inst, signal);
 	}
 }
-
-void 
-mtask_module_init(const char *path) {
+//模块管理的初始化  生成static struct modules * M
+void
+mtask_module_init(const char *path)
+{
 	struct modules *m = mtask_malloc(sizeof(*m));
 	m->count = 0;
-	m->path = mtask_strdup(path);
+	m->path = mtask_strdup(path);// 初始化模块所在路径 字符串copy
 
 	SPIN_INIT(m)
 
