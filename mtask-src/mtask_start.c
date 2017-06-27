@@ -212,7 +212,8 @@ start(int thread) {
 }
 
 static void
-bootstrap(struct mtask_context * logger, const char * cmdline) {
+bootstrap(struct mtask_context * logger, const char * cmdline)
+{
 	int sz = (int)strlen(cmdline);
 	char name[sz+1];
 	char args[sz+1];
@@ -245,7 +246,7 @@ mtask_start(struct mtask_config * config)
 	mtask_mq_init();                       //初始化全局队列 Q
 	mtask_module_init(config->module_path);//初始化模块管理
 	mtask_timer_init();                    //初始化定时器
-	mtask_socket_init();
+	mtask_socket_init();                   //初始化SOCKET_SERVER
 
 	struct mtask_context *ctx = mtask_context_new(config->logservice, config->logger);
 	if (ctx == NULL) {
@@ -253,13 +254,13 @@ mtask_start(struct mtask_config * config)
 		exit(1);
 	}
 
-	bootstrap(ctx, config->bootstrap);
+	bootstrap(ctx, config->bootstrap);//启动初始服务
 
-	start(config->thread);
+	start(config->thread);      //开启各种线程
 
 	// harbor_exit may call socket send, so it should exit before socket_free
-	mtask_harbor_exit();
-	mtask_socket_free();
+	mtask_harbor_exit();        //节点管理服务退出
+	mtask_socket_free();        // 释放网络
 	if (config->daemon) {
 		daemon_exit(config->daemon);
 	}

@@ -20,7 +20,7 @@ struct modules {
 };
 
 static struct modules * M = NULL;
-
+//加载so 返回dlopen 返回的句柄
 static void *
 _try_open(struct modules *m, const char * name) {
 	const char *l;
@@ -28,7 +28,7 @@ _try_open(struct modules *m, const char * name) {
 	size_t path_size = strlen(path);
 	size_t name_size = strlen(name);
 
-	int sz = path_size + name_size;
+	int sz = (int)(path_size + name_size);
 	//search path
 	void * dl = NULL;
 	char tmp[sz];
@@ -39,7 +39,7 @@ _try_open(struct modules *m, const char * name) {
 		if (*path == '\0') break;
 		l = strchr(path, ';');
 		if (l == NULL) l = path + strlen(path);
-		int len = l - path;
+		int len = (int)(l - path);
 		int i;
 		for (i=0;path[i]!='?' && i < len ;i++) {
 			tmp[i] = path[i];
@@ -51,7 +51,7 @@ _try_open(struct modules *m, const char * name) {
 			fprintf(stderr,"Invalid C service path\n");
 			exit(1);
 		}
-		dl = dlopen(tmp, RTLD_NOW | RTLD_GLOBAL);
+		dl = dlopen(tmp, RTLD_NOW | RTLD_GLOBAL);// dlopen() 打开一个动态链接库，并返回动态链接库的句柄
 		path = l;
 	}while(dl == NULL);
 
@@ -61,9 +61,10 @@ _try_open(struct modules *m, const char * name) {
 
 	return dl;
 }
-
-static struct mtask_module * 
-_query(const char * name) {
+//根据文件名查找动态库的句柄
+static struct mtask_module *
+_query(const char * name)
+{
 	int i;
 	for (i=0;i<M->count;i++) {
 		if (strcmp(M->m[i].name,name)==0) {
@@ -89,9 +90,10 @@ _open_sym(struct mtask_module *mod) {
 
 	return mod->init == NULL;
 }
-
-struct mtask_module * 
-mtask_module_query(const char * name) {
+//根据模块名找模块 mtask_module* 结构，如果不存在则加载so
+struct mtask_module *
+mtask_module_query(const char * name)
+{
 	struct mtask_module * result = _query(name);
 	if (result)
 		return result;
@@ -132,18 +134,21 @@ mtask_module_insert(struct mtask_module *mod) {
 
 	SPIN_UNLOCK(M)
 }
-
+// intptr_t对于32位环境是int，对于64位环境是long int
+// C99规定intptr_t可以保存指针值，因而将(~0)先转为intptr_t再转为void*
 void * 
-mtask_module_instance_create(struct mtask_module *m) {
+mtask_module_instance_create(struct mtask_module *m)
+{
 	if (m->create) {
 		return m->create();
 	} else {
 		return (void *)(intptr_t)(~0);
-	}
+    }
 }
 
 int
-mtask_module_instance_init(struct mtask_module *m, void * inst, struct mtask_context *ctx, const char * parm) {
+mtask_module_instance_init(struct mtask_module *m, void * inst, struct mtask_context *ctx, const char * parm)
+{
 	return m->init(inst, ctx, parm);
 }
 

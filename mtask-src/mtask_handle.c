@@ -35,9 +35,10 @@ struct handle_storage {
 };
 
 static struct handle_storage *H = NULL;
-
+// 注册ctx，将 ctx 存到 handle_storage 哈希表中，并得到一个handle
 uint32_t
-mtask_handle_register(struct mtask_context *ctx) {
+mtask_handle_register(struct mtask_context *ctx)
+{
 	struct handle_storage *s = H;
 
 	rwlock_wlock(&s->lock);

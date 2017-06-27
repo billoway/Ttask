@@ -43,8 +43,9 @@ struct global_queue {
 static struct global_queue *Q = NULL;
 //消息队列挂在全局消息链表的尾部
 void
-mtask_globalmq_push(struct message_queue * queue) {
-	struct global_queue *q= Q;
+mtask_globalmq_push(struct message_queue * queue)
+{
+	struct global_queue *q = Q;
 
 	SPIN_LOCK(q)
 	assert(queue->next == NULL);
@@ -56,9 +57,10 @@ mtask_globalmq_push(struct message_queue * queue) {
 	}
 	SPIN_UNLOCK(q)
 }
-
-struct message_queue * 
-mtask_globalmq_pop() {
+//取出全局消息队列链表头部的消息队列
+struct message_queue *
+mtask_globalmq_pop()
+{
 	struct global_queue *q = Q;
 
 	SPIN_LOCK(q)
@@ -75,11 +77,12 @@ mtask_globalmq_pop() {
 
 	return mq;
 }
-
+//创建消息队列
 struct message_queue * 
-mtask_mq_create(uint32_t handle) {
-	struct message_queue *q = mtask_malloc(sizeof(*q));
-	q->handle = handle;
+mtask_mq_create(uint32_t handle)
+{
+	struct message_queue *q = mtask_malloc(sizeof(*q)); //创建消息队列
+	q->handle = handle; //记录handle
 	q->cap = DEFAULT_QUEUE_SIZE;
 	q->head = 0;
 	q->tail = 0;
@@ -87,11 +90,11 @@ mtask_mq_create(uint32_t handle) {
 	// When the queue is create (always between service create and service init) ,
 	// set in_global flag to avoid push it to global queue .
 	// If the service init success, mtask_context_new will call mtask_mq_force_push to push it to global queue.
-	q->in_global = MQ_IN_GLOBAL;
+	q->in_global = MQ_IN_GLOBAL;//在全局队列中
 	q->release = 0;
 	q->overload = 0;
 	q->overload_threshold = MQ_OVERLOAD;
-	q->queue = mtask_malloc(sizeof(struct mtask_message) * q->cap);
+	q->queue = mtask_malloc(sizeof(struct mtask_message) * q->cap);//分配连续的cap内存用于存放具体消息
 	q->next = NULL;
 
 	return q;
@@ -135,20 +138,21 @@ mtask_mq_overload(struct message_queue *q) {
 	} 
 	return 0;
 }
-
+//弹出消息队列中的头部消息
 int
-mtask_mq_pop(struct message_queue *q, struct mtask_message *message) {
+mtask_mq_pop(struct message_queue *q, struct mtask_message *message)
+{
 	int ret = 1;
 	SPIN_LOCK(q)
 
-	if (q->head != q->tail) {
-		*message = q->queue[q->head++];
-		ret = 0;
+	if (q->head != q->tail) {           //如果队列头不等于队列尾
+		*message = q->queue[q->head++]; //取出队列头
+		ret = 0;                        //弹出成功返回0
 		int head = q->head;
 		int tail = q->tail;
 		int cap = q->cap;
 
-		if (head >= cap) {
+		if (head >= cap) {              //如果队列头 >= 最大队列数
 			q->head = head = 0;
 		}
 		int length = tail - head;
@@ -165,7 +169,7 @@ mtask_mq_pop(struct message_queue *q, struct mtask_message *message) {
 	}
 
 	if (ret) {
-		q->in_global = 0;
+		q->in_global = 0;           //设置在全局状态为0
 	}
 	
 	SPIN_UNLOCK(q)

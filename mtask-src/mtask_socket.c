@@ -14,7 +14,8 @@
 static struct socket_server * SOCKET_SERVER = NULL;
 
 void 
-mtask_socket_init() {
+mtask_socket_init()
+{
 	SOCKET_SERVER = socket_server_create();
 }
 

@@ -77,20 +77,23 @@ struct mtask_node {
 
 };
 
-static struct mtask_node G_NODE;
+static struct mtask_node G_NODE;//节点结构
 
 int 
-mtask_context_total() {
+mtask_context_total()
+{
 	return G_NODE.total;
 }
-
+//原子操作增加节点数量
 static void
-context_inc() {
+context_inc()
+{
 	ATOM_INC(&G_NODE.total);
 }
-
+//原子操作减少节点数量
 static void
-context_dec() {
+context_dec()
+{
 	ATOM_DEC(&G_NODE.total);
 }
 
@@ -131,18 +134,20 @@ drop_message(struct mtask_message *msg, void *ud) {
 }
 
 struct mtask_context * 
-mtask_context_new(const char * name, const char *param) {
+mtask_context_new(const char * name, const char *param)
+{
+    //查询模块数组，找到则直接返回模块结构的指针 没有找到则打开文件进行dlopen加载 同时dlsym找到函数指针 生成mtask_module结构 放入M管理
 	struct mtask_module * mod = mtask_module_query(name);
 
 	if (mod == NULL)
 		return NULL;
-
+    //调用模块的创建函数 xxx_create() 返回实例句柄
 	void *inst = mtask_module_instance_create(mod);
 	if (inst == NULL)
 		return NULL;
 	struct mtask_context * ctx = mtask_malloc(sizeof(*ctx));
 	CHECKCALLING_INIT(ctx)
-
+    //填充结构 模块 实例 引用计数
 	ctx->mod = mod;
 	ctx->instance = inst;
 	ctx->ref = 2;
@@ -153,22 +158,29 @@ mtask_context_new(const char * name, const char *param) {
 
 	ctx->init = false;
 	ctx->endless = false;
+    
+    ctx->cpu_cost = 0;
+    ctx->cpu_start = 0;
+    ctx->message_count = 0;
+    ctx->profile = G_NODE.profile;
 	// Should set to 0 first to avoid mtask_handle_retireall get an uninitialized handle
-	ctx->handle = 0;	
+	ctx->handle = 0;
+    //注册ctx,将 ctx 存到 handle_storage (M)哈希表中，并得到一个handle
 	ctx->handle = mtask_handle_register(ctx);
+    //创建mtask_context中的消息队列 服务句柄会放在消息队列中
 	struct message_queue * queue = ctx->queue = mtask_mq_create(ctx->handle);
 	// init function maybe use ctx->handle, so it must init at last
 	context_inc();
-
+    //模块初始化 xxx_init()
 	CHECKCALLING_BEGIN(ctx)
-	int r = mtask_module_instance_init(mod, inst, ctx, param);
+	int r = mtask_module_instance_init(mod, inst, ctx, param);// 实例化 '_init' 函数
 	CHECKCALLING_END(ctx)
 	if (r == 0) {
-		struct mtask_context * ret = mtask_context_release(ctx);
+		struct mtask_context * ret = mtask_context_release(ctx);//实例化 '_release' 函数 引用计数减少
 		if (ret) {
-			ctx->init = true;
+			ctx->init = true;// 实例化 '_init' 成功
 		}
-		mtask_globalmq_push(queue);
+		mtask_globalmq_push(queue);// 强行压入消息队列
 		if (ret) {
 			mtask_error(ret, "LAUNCH %s %s", name, param ? param : "");
 		}
@@ -219,9 +231,10 @@ delete_context(struct mtask_context *ctx) {
 	mtask_free(ctx);
 	context_dec();
 }
-
+//减少引用计数 引用计数为0删除ctx
 struct mtask_context * 
-mtask_context_release(struct mtask_context *ctx) {
+mtask_context_release(struct mtask_context *ctx)
+{
 	if (ATOM_DEC(&ctx->ref) == 0) {
 		delete_context(ctx);
 		return NULL;
@@ -277,7 +290,8 @@ dispatch_message(struct mtask_context *ctx, struct mtask_message *msg) {
 }
 
 void 
-mtask_context_dispatchall(struct mtask_context * ctx) {
+mtask_context_dispatchall(struct mtask_context * ctx)
+{
 	// for mtask_error
 	struct mtask_message msg;
 	struct message_queue *q = ctx->queue;
