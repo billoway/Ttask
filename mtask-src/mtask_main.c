@@ -1,9 +1,3 @@
-#include "mtask.h"
-
-#include "mtask_imp.h"
-#include "mtask_env.h"
-#include "mtask_server.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,8 +7,15 @@
 #include <signal.h>
 #include <assert.h>
 
+#include "mtask.h"
+
+#include "mtask_imp.h"
+#include "mtask_env.h"
+#include "mtask_server.h"
+
 static int
-optint(const char *key, int opt) {
+optint(const char *key, int opt)
+{
 	const char * str = mtask_getenv(key);
 	if (str == NULL) {
 		char tmp[20];
@@ -27,7 +28,8 @@ optint(const char *key, int opt) {
 
 
 static int
-optboolean(const char *key, int opt) {
+optboolean(const char *key, int opt)
+{
 	const char * str = mtask_getenv(key);
 	if (str == NULL) {
 		mtask_setenv(key, opt ? "true" : "false");
@@ -38,7 +40,8 @@ optboolean(const char *key, int opt) {
 
 
 static const char *
-optstring(const char *key,const char * opt) {
+optstring(const char *key,const char * opt)
+{
 	const char * str = mtask_getenv(key);
 	if (str == NULL) {
 		if (opt) {
@@ -51,7 +54,8 @@ optstring(const char *key,const char * opt) {
 }
 
 static void
-_init_env(lua_State *L) {
+_init_env(lua_State *L)
+{
 	lua_pushnil(L);  /* first key 1是栈顶位置 */
     //从栈上弹出一个 key（键）,然后把索引指定的表中 key-value（健值）对压入堆栈（指定key后面的下一 (next)对）.
 	while (lua_next(L, -2) != 0) {
@@ -80,7 +84,8 @@ _init_env(lua_State *L) {
 //服务端例行代码 忽略信号
 //如果尝试send到一个disconnected socket上，就会让底层抛出一个SIGPIPE信号。这个信号的缺省处理方法是退出进程
 int
-sigign() {
+sigign()
+{
 	struct sigaction sa;
 	sa.sa_handler = SIG_IGN;
 	sigaction(SIGPIPE, &sa, 0);
@@ -103,7 +108,7 @@ int
 main(int argc, char *argv[]) {
 	const char * config_file = NULL ;
 	if (argc > 1) {
-		config_file = argv[1];
+		config_file = argv[1];//argv[0] 是程序全名
 	} else {
 		fprintf(stderr, "Need a config file.\n"
 			"usage: mtask configfilename\n");

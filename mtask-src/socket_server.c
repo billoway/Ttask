@@ -72,7 +72,7 @@ struct wb_list {
 
 // 应用层的socket
 struct socket {
-    uintptr_t opaque;     // 在skynet中用于保存服务的handle
+    uintptr_t opaque;     // 在mtask中用于保存服务的handle
     struct wb_list high;  // 发送缓冲区链表头指针和尾指针
     struct wb_list low;
     int64_t wb_size;      // 发送缓冲区未发送的数据
@@ -128,6 +128,7 @@ struct request_setudp {
 
 struct request_close {
 	int id;
+    int shutdown;
 	uintptr_t opaque;
 };
 
@@ -474,7 +475,7 @@ send_list_tcp(struct socket_server *ss, struct socket *s, struct wb_list *list, 
 	while (list->head) {
 		struct write_buffer * tmp = list->head;
 		for (;;) {
-			int sz = write(s->fd, tmp->ptr, tmp->sz);
+			int sz = (int)write(s->fd, tmp->ptr, tmp->sz);
 			if (sz < 0) {
 				switch(errno) {
 				case EINTR:
@@ -1347,6 +1348,16 @@ void
 socket_server_exit(struct socket_server *ss) {
 	struct request_package request;
 	send_request(ss, &request, 'X', 0);
+}
+
+void
+socket_server_shutdown(struct socket_server *ss, uintptr_t opaque, int id)
+{
+    struct request_package request;
+    request.u.close.id = id;
+    request.u.close.shutdown = 1;
+    request.u.close.opaque = opaque;
+    send_request(ss, &request, 'K', sizeof(request.u.close));
 }
 
 void

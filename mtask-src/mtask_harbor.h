@@ -20,9 +20,13 @@ struct remote_message {
 };
 // 向远程服务发送消息
 void mtask_harbor_send(struct remote_message *rmsg, uint32_t source, int session);
+
 int mtask_harbor_message_isremote(uint32_t handle);
+
 void mtask_harbor_init(int harbor);
+
 void mtask_harbor_start(void * ctx);
+
 void mtask_harbor_exit();
 
 #endif

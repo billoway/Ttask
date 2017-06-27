@@ -30,9 +30,10 @@ mtask_socket_free() {
 	SOCKET_SERVER = NULL;
 }
 
-// mainloop thread
+// mainloop thread 将数据压入相应服务的消息队列
 static void
-forward_message(int type, bool padding, struct socket_message * result) {
+forward_message(int type, bool padding, struct socket_message * result)
+{
 	struct mtask_socket_message *sm;
 	size_t sz = sizeof(*sm);
 	if (padding) {
@@ -56,7 +57,7 @@ forward_message(int type, bool padding, struct socket_message * result) {
 	struct mtask_message message;
 	message.source = 0;
 	message.session = 0;
-	message.data = sm;
+	message.data = sm; //数据为 mtask_socket_message
 	message.sz = sz | ((size_t)PTYPE_SOCKET << MESSAGE_TYPE_SHIFT);
 	
 	if (mtask_context_push((uint32_t)result->opaque, &message)) {
@@ -66,14 +67,15 @@ forward_message(int type, bool padding, struct socket_message * result) {
 		mtask_free(sm);
 	}
 }
-
+//检查socket事件 并且做转发
 int 
-mtask_socket_poll() {
+mtask_socket_poll()
+{
 	struct socket_server *ss = SOCKET_SERVER;
 	assert(ss);
 	struct socket_message result;
 	int more = 1;
-	int type = socket_server_poll(ss, &result, &more);
+	int type = socket_server_poll(ss, &result, &more);//检测socket事件 
 	switch (type) {
 	case SOCKET_EXIT:
 		return 0;
@@ -106,7 +108,8 @@ mtask_socket_poll() {
 }
 
 static int
-check_wsz(struct mtask_context *ctx, int id, void *buffer, int64_t wsz) {
+check_wsz(struct mtask_context *ctx, int id, void *buffer, int64_t wsz)
+{
 	if (wsz < 0) {
 		return -1;
 	} else if (wsz > 1024 * 1024) {
@@ -122,70 +125,89 @@ check_wsz(struct mtask_context *ctx, int id, void *buffer, int64_t wsz) {
 }
 
 int
-mtask_socket_send(struct mtask_context *ctx, int id, void *buffer, int sz) {
+mtask_socket_send(struct mtask_context *ctx, int id, void *buffer, int sz)
+{
 	int64_t wsz = socket_server_send(SOCKET_SERVER, id, buffer, sz);
 	return check_wsz(ctx, id, buffer, wsz);
 }
 
 void
-mtask_socket_send_lowpriority(struct mtask_context *ctx, int id, void *buffer, int sz) {
+mtask_socket_send_lowpriority(struct mtask_context *ctx, int id, void *buffer, int sz)
+{
 	socket_server_send_lowpriority(SOCKET_SERVER, id, buffer, sz);
 }
 
 int 
-mtask_socket_listen(struct mtask_context *ctx, const char *host, int port, int backlog) {
+mtask_socket_listen(struct mtask_context *ctx, const char *host, int port, int backlog)
+{
 	uint32_t source = mtask_context_handle(ctx);
 	return socket_server_listen(SOCKET_SERVER, source, host, port, backlog);
 }
 
 int 
-mtask_socket_connect(struct mtask_context *ctx, const char *host, int port) {
+mtask_socket_connect(struct mtask_context *ctx, const char *host, int port)
+{
 	uint32_t source = mtask_context_handle(ctx);
 	return socket_server_connect(SOCKET_SERVER, source, host, port);
 }
 
 int 
-mtask_socket_bind(struct mtask_context *ctx, int fd) {
+mtask_socket_bind(struct mtask_context *ctx, int fd)
+{
 	uint32_t source = mtask_context_handle(ctx);
 	return socket_server_bind(SOCKET_SERVER, source, fd);
 }
 
 void 
-mtask_socket_close(struct mtask_context *ctx, int id) {
+mtask_socket_close(struct mtask_context *ctx, int id)
+{
 	uint32_t source = mtask_context_handle(ctx);
 	socket_server_close(SOCKET_SERVER, source, id);
 }
 
+void
+mtask_socket_shutdown(struct mtask_context *ctx, int id)
+{
+    uint32_t source = mtask_context_handle(ctx);
+    socket_server_shutdown(SOCKET_SERVER, source, id);
+}
+
 void 
-mtask_socket_start(struct mtask_context *ctx, int id) {
+mtask_socket_start(struct mtask_context *ctx, int id)
+{
 	uint32_t source = mtask_context_handle(ctx);
 	socket_server_start(SOCKET_SERVER, source, id);
 }
 
 void
-mtask_socket_nodelay(struct mtask_context *ctx, int id) {
+mtask_socket_nodelay(struct mtask_context *ctx, int id)
+{
 	socket_server_nodelay(SOCKET_SERVER, id);
 }
 
 int 
-mtask_socket_udp(struct mtask_context *ctx, const char * addr, int port) {
+mtask_socket_udp(struct mtask_context *ctx, const char * addr, int port)
+{
 	uint32_t source = mtask_context_handle(ctx);
 	return socket_server_udp(SOCKET_SERVER, source, addr, port);
 }
 
 int 
-mtask_socket_udp_connect(struct mtask_context *ctx, int id, const char * addr, int port) {
+mtask_socket_udp_connect(struct mtask_context *ctx, int id, const char * addr, int port)
+{
 	return socket_server_udp_connect(SOCKET_SERVER, id, addr, port);
 }
 
 int 
-mtask_socket_udp_send(struct mtask_context *ctx, int id, const char * address, const void *buffer, int sz) {
+mtask_socket_udp_send(struct mtask_context *ctx, int id, const char * address, const void *buffer, int sz)
+{
 	int64_t wsz = socket_server_udp_send(SOCKET_SERVER, id, (const struct socket_udp_address *)address, buffer, sz);
 	return check_wsz(ctx, id, (void *)buffer, wsz);
 }
 
 const char *
-mtask_socket_udp_address(struct mtask_socket_message *msg, int *addrsz) {
+mtask_socket_udp_address(struct mtask_socket_message *msg, int *addrsz)
+{
 	if (msg->type != MTASK_SOCKET_TYPE_UDP) {
 		return NULL;
 	}

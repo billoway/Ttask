@@ -170,7 +170,6 @@
 		792E9E051B7DF3330078FDC9 /* lzio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lzio.h; sourceTree = "<group>"; };
 		792E9E061B7DF3330078FDC9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		792E9E071B7DF3330078FDC9 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
-		798213CA1F010307007BE35B /* atomic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = atomic.h; sourceTree = "<group>"; };
 		798B5D761B79B4860054E773 /* mtask_lua_clientsocket.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mtask_lua_clientsocket.c; sourceTree = "<group>"; };
 		798B5D771B79B4860054E773 /* mtask_lua_debugchannel.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mtask_lua_debugchannel.c; sourceTree = "<group>"; };
 		798B5D781B79B4860054E773 /* mtask_lua_memory.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mtask_lua_memory.c; sourceTree = "<group>"; };
@@ -460,7 +459,6 @@
 				799665621B859D5E00D3865E /* mtask_atomic.h */,
 				799665631B85A5A300D3865E /* mtask_spinlock.h */,
 				7929B57C1B874FDE00780961 /* mtask.h */,
-				798213CA1F010307007BE35B /* atomic.h */,
 			);
 			path = "mtask-src";
 			sourceTree = SOURCE_ROOT;

@@ -101,7 +101,8 @@ mtask_mq_create(uint32_t handle)
 }
 
 static void 
-_release(struct message_queue *q) {
+_release(struct message_queue *q)
+{
 	assert(q->next == NULL);
 	SPIN_DESTROY(q)
 	mtask_free(q->queue);
@@ -109,12 +110,14 @@ _release(struct message_queue *q) {
 }
 
 uint32_t 
-mtask_mq_handle(struct message_queue *q) {
+mtask_mq_handle(struct message_queue *q)
+{
 	return q->handle;
 }
-
+//消息队列的长度
 int
-mtask_mq_length(struct message_queue *q) {
+mtask_mq_length(struct message_queue *q)
+{
 	int head, tail,cap;
 
 	SPIN_LOCK(q)
@@ -130,7 +133,8 @@ mtask_mq_length(struct message_queue *q) {
 }
 
 int
-mtask_mq_overload(struct message_queue *q) {
+mtask_mq_overload(struct message_queue *q)
+{
 	if (q->overload) {
 		int overload = q->overload;
 		q->overload = 0;
@@ -176,9 +180,10 @@ mtask_mq_pop(struct message_queue *q, struct mtask_message *message)
 
 	return ret;
 }
-
+//扩展消息队列message_queue 中的存放消息的内存空间
 static void
-expand_queue(struct message_queue *q) {
+expand_queue(struct message_queue *q)
+{
 	struct mtask_message *new_queue = mtask_malloc(sizeof(struct mtask_message) * q->cap * 2);
 	int i;
 	for (i=0;i<q->cap;i++) {
@@ -191,22 +196,23 @@ expand_queue(struct message_queue *q) {
 	mtask_free(q->queue);
 	q->queue = new_queue;
 }
-
-void 
-mtask_mq_push(struct message_queue *q, struct mtask_message *message) {
+//消息压入消息队列 如果标识为在全局中 则将消息队列挂在到全局消息队列的尾部
+void
+mtask_mq_push(struct message_queue *q, struct mtask_message *message)
+{
 	assert(message);
 	SPIN_LOCK(q)
 
-	q->queue[q->tail] = *message;
+	q->queue[q->tail] = *message;//将消息压入消息队列的尾
 	if (++ q->tail >= q->cap) {
 		q->tail = 0;
 	}
 
-	if (q->head == q->tail) {
+	if (q->head == q->tail) {//如果队列头等于队列尾 扩容
 		expand_queue(q);
 	}
 
-	if (q->in_global == 0) {
+	if (q->in_global == 0) { //如果在全局标志等于0  设置标志为在全局 压入全局消息队列
 		q->in_global = MQ_IN_GLOBAL;
 		mtask_globalmq_push(q);
 	}
@@ -222,9 +228,10 @@ mtask_mq_init()
 	SPIN_INIT(q);
 	Q = q;
 }
-
-void 
-mtask_mq_mark_release(struct message_queue *q) {
+//标记消息队列release = 1 并且将消息队列放入全局消息队列链表
+void
+mtask_mq_mark_release(struct message_queue *q)
+{
 	SPIN_LOCK(q)
 	assert(q->release == 0);
 	q->release = 1;
@@ -233,18 +240,20 @@ mtask_mq_mark_release(struct message_queue *q) {
 	}
 	SPIN_UNLOCK(q)
 }
-
+//消息弹出消息队列 删除消息队列中的消息内存块数据
 static void
-_drop_queue(struct message_queue *q, message_drop drop_func, void *ud) {
+_drop_queue(struct message_queue *q, message_drop drop_func, void *ud)
+{
 	struct mtask_message msg;
 	while(!mtask_mq_pop(q, &msg)) {
 		drop_func(&msg, ud);
 	}
 	_release(q);
 }
-
-void 
-mtask_mq_release(struct message_queue *q, message_drop drop_func, void *ud) {
+//释放消息队列  消息弹出消息队列 删除消息队列中的消息内存块数据
+void
+mtask_mq_release(struct message_queue *q, message_drop drop_func, void *ud)
+{
 	SPIN_LOCK(q)
 	
 	if (q->release) {

@@ -4,8 +4,11 @@
 #include <stdint.h>
 
 int mtask_timeout(uint32_t handle, int time, int session);
+
 void mtask_updatetime(void);
+
 uint32_t mtask_start_time(void);
+// for profile, in micro second
 uint64_t mtask_thread_time(void);
 
 void mtask_timer_init(void);

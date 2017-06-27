@@ -43,7 +43,7 @@ handle_hup(int signal)
     }
 }
 #define CHECK_ABORT if (mtask_context_total()==0) break;
-
+//创建线程
 static void
 create_thread(pthread_t *thread, void *(*start_routine) (void *), void *arg)
 {
@@ -52,19 +52,22 @@ create_thread(pthread_t *thread, void *(*start_routine) (void *), void *arg)
 		exit(1);
 	}
 }
-
+//当睡眠线程的数量 >一定数量才唤醒一个线程
 static void
-wakeup(struct monitor *m, int busy) {
+wakeup(struct monitor *m, int busy)
+{
 	if (m->sleep >= m->count - busy) {
 		// signal sleep worker, "spurious wakeup" is harmless
 		pthread_cond_signal(&m->cond);
 	}
 }
-
+//socket线程
 static void *
-thread_socket(void *p) {
-	struct monitor * m = p;
-	mtask_initthread(THREAD_SOCKET);
+thread_socket(void *p)
+{
+	struct monitor * m = p; //接入monitor结构
+	mtask_initthread(THREAD_SOCKET);//设置线程局部存储 G_NODE.handle_key 为 THREAD_SOCKET
+    //检测网络事件（epoll管理的网络事件）并且将事件放入消息队列 mtask_socket_poll--->mtask_context_push
 	for (;;) {
 		int r = mtask_socket_poll();
 		if (r==0)
@@ -77,32 +80,34 @@ thread_socket(void *p) {
 	}
 	return NULL;
 }
-
+//释放监视器
 static void
-free_monitor(struct monitor *m) {
+free_monitor(struct monitor *m)
+{
 	int i;
 	int n = m->count;
 	for (i=0;i<n;i++) {
-		mtask_monitor_delete(m->m[i]);
+		mtask_monitor_delete(m->m[i]);//删除mtask_monitor结构
 	}
-	pthread_mutex_destroy(&m->mutex);
-	pthread_cond_destroy(&m->cond);
-	mtask_free(m->m);
-	mtask_free(m);
+	pthread_mutex_destroy(&m->mutex);//删除互斥锁
+	pthread_cond_destroy(&m->cond); //删除条件变量
+	mtask_free(m->m);//释放监视中的mtask_monitor数组指针
+	mtask_free(m);   //释放监视结构
 }
-
+//监视线程 用于监控是否有消息没有即时处理
 static void *
-thread_monitor(void *p) {
+thread_monitor(void *p)
+{
 	struct monitor * m = p;
 	int i;
 	int n = m->count;
 	mtask_initthread(THREAD_MONITOR);
 	for (;;) {
 		CHECK_ABORT
-		for (i=0;i<n;i++) {
+		for (i=0;i<n;i++) {//遍历监视列表
 			mtask_monitor_check(m->m[i]);
 		}
-		for (i=0;i<5;i++) {
+		for (i=0;i<5;i++) {//睡眠5秒
 			CHECK_ABORT
 			sleep(1);
 		}
@@ -110,46 +115,66 @@ thread_monitor(void *p) {
 
 	return NULL;
 }
-
+static void
+signal_hup()
+{
+    // make log file reopen
+    struct mtask_message smsg;
+    smsg.source = 0;
+    smsg.session = 0;
+    smsg.data = NULL;
+    smsg.sz = (size_t)PTYPE_SYSTEM << MESSAGE_TYPE_SHIFT;
+    uint32_t logger = mtask_handle_findname("logger");
+    if (logger) {
+        mtask_context_push(logger, &smsg);
+    }
+}
+//定时器线程
 static void *
-thread_timer(void *p) {
+thread_timer(void *p)
+{
 	struct monitor * m = p;
 	mtask_initthread(THREAD_TIMER);
 	for (;;) {
-		mtask_updatetime();
+		mtask_updatetime();//更新 定时器 的时间
 		CHECK_ABORT
-		wakeup(m,m->count-1);
-		usleep(2500);
+		wakeup(m,m->count-1);//只要有一个线程睡眠就唤醒 让工作线程动起来
+		usleep(2500);//睡眠2500微妙（1秒=1000000微秒）0.025秒
+        if (SIG) {
+            signal_hup();
+            SIG = 0;
+        }
 	}
 	// wakeup socket thread
 	mtask_socket_exit();
 	// wakeup all worker thread
 	pthread_mutex_lock(&m->mutex);
-	m->quit = 1;
-	pthread_cond_broadcast(&m->cond);
+	m->quit = 1;    //设置退出标志
+	pthread_cond_broadcast(&m->cond);//唤醒所有等待条件变量的线程
 	pthread_mutex_unlock(&m->mutex);
 	return NULL;
 }
-
+//工作线程
 static void *
-thread_worker(void *p) {
+thread_worker(void *p)
+{
 	struct worker_parm *wp = p;
 	int id = wp->id;
 	int weight = wp->weight;
 	struct monitor *m = wp->m;
-	struct mtask_monitor *sm = m->m[id];
+	struct mtask_monitor *sm = m->m[id];//通过线程id拿到监视器结构（mtask_monitor）
 	mtask_initthread(THREAD_WORKER);
 	struct message_queue * q = NULL;
 	while (!m->quit) {
-		q = mtask_context_message_dispatch(sm, q, weight);
+		q = mtask_context_message_dispatch(sm, q, weight);//消息调度执行（取出消息 执行服务中的回调函数）
 		if (q == NULL) {
 			if (pthread_mutex_lock(&m->mutex) == 0) {
-				++ m->sleep;
+				++ m->sleep;//进入睡眠
 				// "spurious wakeup" is harmless,
 				// because mtask_context_message_dispatch() can be call at any time.
 				if (!m->quit)
-					pthread_cond_wait(&m->cond, &m->mutex);
-				-- m->sleep;
+					pthread_cond_wait(&m->cond, &m->mutex);//没有消息则进入睡眠等待唤醒
+				-- m->sleep;//唤醒后减少睡眠线程数量
 				if (pthread_mutex_unlock(&m->mutex)) {
 					fprintf(stderr, "unlock mutex error");
 					exit(1);
@@ -161,9 +186,10 @@ thread_worker(void *p) {
 }
 
 static void
-start(int thread) {
-	pthread_t pid[thread+3];
-
+start(int thread)
+{
+    pthread_t pid[thread+3]; // 线程数+3 3个线程分别用于 _monitor _timer  _socket 监控 定时器 socket IO
+    
 	struct monitor *m = mtask_malloc(sizeof(*m));
 	memset(m, 0, sizeof(*m));
 	m->count = thread;
@@ -172,7 +198,7 @@ start(int thread) {
 	m->m = mtask_malloc(thread * sizeof(struct mtask_monitor *));
 	int i;
 	for (i=0;i<thread;i++) {
-		m->m[i] = mtask_monitor_new();
+		m->m[i] = mtask_monitor_new();//创建mtask_monitor结构放在监视列表 为每个线程新建一个监视
 	}
 	if (pthread_mutex_init(&m->mutex, NULL)) {
 		fprintf(stderr, "Init mutex error");

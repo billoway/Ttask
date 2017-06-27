@@ -10,19 +10,22 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define MAX_MODULE_TYPE 32
+// 动态链接库 .so 的加载 和管理模块
 
+#define MAX_MODULE_TYPE 32  //模块类型最大32
+//模块管理结构
 struct modules {
-	int count;
-	struct spinlock lock;
-	const char * path;
-	struct mtask_module m[MAX_MODULE_TYPE];
+	int count;              //已加载模块的数量
+	struct spinlock lock;   //互斥锁
+	const char * path;      //模块路径
+	struct mtask_module m[MAX_MODULE_TYPE];//模块数组
 };
 
 static struct modules * M = NULL;
 //加载so 返回dlopen 返回的句柄
 static void *
-_try_open(struct modules *m, const char * name) {
+_try_open(struct modules *m, const char * name)
+{
 	const char *l;
 	const char * path = m->path;
 	size_t path_size = strlen(path);
@@ -36,7 +39,7 @@ _try_open(struct modules *m, const char * name) {
 	{
 		memset(tmp,0,sz);
 		while (*path == ';') path++;
-		if (*path == '\0') break;
+		if (*path == '\0') break;//首次出现";"的指针位置
 		l = strchr(path, ';');
 		if (l == NULL) l = path + strlen(path);
 		int len = (int)(l - path);
@@ -50,7 +53,7 @@ _try_open(struct modules *m, const char * name) {
 		} else {
 			fprintf(stderr,"Invalid C service path\n");
 			exit(1);
-		}
+		}//加载so库 全局共享解析所有符号的方式加载so
 		dl = dlopen(tmp, RTLD_NOW | RTLD_GLOBAL);// dlopen() 打开一个动态链接库，并返回动态链接库的句柄
 		path = l;
 	}while(dl == NULL);
@@ -73,9 +76,11 @@ _query(const char * name)
 	}
 	return NULL;
 }
-
+//使用dlsym查找so中的xxx_create xxx_init xxx_release xxx_signal 函数的指针
+// dlsym() 根据动态链接库操作句柄与符号，返回符号对应的地址。
 static int
-_open_sym(struct mtask_module *mod) {
+_open_sym(struct mtask_module *mod)
+{
 	size_t name_size = strlen(mod->name);
 	char tmp[name_size + 9]; // create/init/release/signal , longest name is release (7)
 	memcpy(tmp, mod->name, name_size);
@@ -101,11 +106,11 @@ mtask_module_query(const char * name)
 	SPIN_LOCK(M)
 
 	result = _query(name); // double check
-
+    // 如果没有这个模块 测试打开这个模块
 	if (result == NULL && M->count < MAX_MODULE_TYPE) {
 		int index = M->count;
-		void * dl = _try_open(M,name);
-		if (dl) {
+		void * dl = _try_open(M,name);// 加载动态链接库 设置模块的函数指针
+		if (dl) { //填充mtask_module
 			M->m[index].name = name;
 			M->m[index].module = dl;
 
@@ -123,7 +128,8 @@ mtask_module_query(const char * name)
 }
 
 void 
-mtask_module_insert(struct mtask_module *mod) {
+mtask_module_insert(struct mtask_module *mod)
+{
 	SPIN_LOCK(M)
 
 	struct mtask_module * m = _query(mod->name);
@@ -153,14 +159,16 @@ mtask_module_instance_init(struct mtask_module *m, void * inst, struct mtask_con
 }
 
 void 
-mtask_module_instance_release(struct mtask_module *m, void *inst) {
+mtask_module_instance_release(struct mtask_module *m, void *inst)
+{
 	if (m->release) {
 		m->release(inst);
 	}
 }
 
 void
-mtask_module_instance_signal(struct mtask_module *m, void *inst, int signal) {
+mtask_module_instance_signal(struct mtask_module *m, void *inst, int signal)
+{
 	if (m->signal) {
 		m->signal(inst, signal);
 	}

@@ -47,20 +47,22 @@ mtask_handle_register(struct mtask_context *ctx)
 		int i;
 		for (i=0;i<s->slot_size;i++) {
 			uint32_t handle = (i+s->handle_index) & HANDLE_MASK;
-			int hash = handle & (s->slot_size-1);
-			if (s->slot[hash] == NULL) {
+			int hash = handle & (s->slot_size-1); // 等价于 handle % s->slot_size
+			if (s->slot[hash] == NULL) {// 找到未使用的  slot 将这个 ctx 放入这个 slot 中
 				s->slot[hash] = ctx;
-				s->handle_index = handle + 1;
+				s->handle_index = handle + 1;// 移动 handle_index 方便下次使用
 
 				rwlock_wunlock(&s->lock);
 
-				handle |= s->harbor;
+				handle |= s->harbor;// harbor 用于不同主机间的通信 handle高8位用于harbor 低24位用于本机的 所以这里需要 |= 下
 				return handle;
 			}
 		}
-		assert((s->slot_size*2 - 1) <= HANDLE_MASK);
+		assert((s->slot_size*2 - 1) <= HANDLE_MASK);// 确保 扩大2倍空间后 总共handle即 slot的数量不超过 24位的限制
+        // 哈希表扩大2倍
 		struct mtask_context ** new_slot = mtask_malloc(s->slot_size * 2 * sizeof(struct mtask_context *));
 		memset(new_slot, 0, s->slot_size * 2 * sizeof(struct mtask_context *));
+        // 将原来的数据拷贝到新的空间
 		for (i=0;i<s->slot_size;i++) {
 			int hash = mtask_context_handle(s->slot[i]) & (s->slot_size * 2 - 1);
 			assert(new_slot[hash] == NULL);
@@ -71,28 +73,29 @@ mtask_handle_register(struct mtask_context *ctx)
 		s->slot_size *= 2;
 	}
 }
-
+// 收回handle free handle对应的mtask_context 和 name 表中用过的name字符串
 int
-mtask_handle_retire(uint32_t handle) {
+mtask_handle_retire(uint32_t handle)
+{
 	int ret = 0;
 	struct handle_storage *s = H;
 
 	rwlock_wlock(&s->lock);
 
-	uint32_t hash = handle & (s->slot_size-1);
+	uint32_t hash = handle & (s->slot_size-1);// 等价于  handle % s->slot_size
 	struct mtask_context * ctx = s->slot[hash];
 
 	if (ctx != NULL && mtask_context_handle(ctx) == handle) {
-		s->slot[hash] = NULL;
+		s->slot[hash] = NULL;   // 置空，哈希表腾出空间
 		ret = 1;
 		int i;
 		int j=0, n=s->name_count;
 		for (i=0; i<n; ++i) {
-			if (s->name[i].handle == handle) {
+			if (s->name[i].handle == handle) {// 在 name 表中找到 handle 对应的 name free掉
 				mtask_free(s->name[i].name);
 				continue;
-			} else if (i!=j) {
-				s->name[j] = s->name[i];
+			} else if (i!=j) { // 说明free了一个name
+				s->name[j] = s->name[i];// 因此需要将后续元素移到前面
 			}
 			++j;
 		}
@@ -110,9 +113,10 @@ mtask_handle_retire(uint32_t handle) {
 
 	return ret;
 }
-
+// 收回所有handle
 void 
-mtask_handle_retireall() {
+mtask_handle_retireall()
+{
 	struct handle_storage *s = H;
 	for (;;) {
 		int n=0;
@@ -134,9 +138,10 @@ mtask_handle_retireall() {
 			return;
 	}
 }
-
-struct mtask_context * 
-mtask_handle_grab(uint32_t handle) {
+// 通过handle获取mtask_context, mtask_context的引用计数加1
+struct mtask_context *
+mtask_handle_grab(uint32_t handle)
+{
 	struct handle_storage *s = H;
 	struct mtask_context * result = NULL;
 
@@ -153,9 +158,10 @@ mtask_handle_grab(uint32_t handle) {
 
 	return result;
 }
-
+// 根据名称查找handle
 uint32_t 
-mtask_handle_findname(const char * name) {
+mtask_handle_findname(const char * name)
+{
 	struct handle_storage *s = H;
 
 	rwlock_rlock(&s->lock);
@@ -165,9 +171,9 @@ mtask_handle_findname(const char * name) {
 	int begin = 0;
 	int end = s->name_count - 1;
 	while (begin<=end) {
-		int mid = (begin+end)/2;
+		int mid = (begin+end)/2;// 这里用的二分查找 (可能会有整形溢出 改成减法避免）
 		struct handle_name *n = &s->name[mid];
-		int c = strcmp(n->name, name);
+		int c = strcmp(n->name, name);// 一直在头部插入 实际上这样插入后 name 会按长度大小排好序 这样就能使用二分查找了
 		if (c==0) {
 			handle = n->handle;
 			break;
@@ -185,7 +191,8 @@ mtask_handle_findname(const char * name) {
 }
 
 static void
-_insert_name_before(struct handle_storage *s, char *name, uint32_t handle, int before) {
+_insert_name_before(struct handle_storage *s, char *name, uint32_t handle, int before)
+{
 	if (s->name_count >= s->name_cap) {
 		s->name_cap *= 2;
 		assert(s->name_cap <= MAX_SLOT_SIZE);
@@ -209,9 +216,10 @@ _insert_name_before(struct handle_storage *s, char *name, uint32_t handle, int b
 	s->name[before].handle = handle;
 	s->name_count ++;
 }
-
+// 插入 name 和 handle
 static const char *
-_insert_name(struct handle_storage *s, const char * name, uint32_t handle) {
+_insert_name(struct handle_storage *s, const char * name, uint32_t handle)
+{
 	int begin = 0;
 	int end = s->name_count - 1;
 	while (begin<=end) {
@@ -219,7 +227,7 @@ _insert_name(struct handle_storage *s, const char * name, uint32_t handle) {
 		struct handle_name *n = &s->name[mid];
 		int c = strcmp(n->name, name);
 		if (c==0) {
-			return NULL;
+			return NULL;// 名称已存在 这里名称不能重复插入
 		}
 		if (c<0) {
 			begin = mid + 1;
@@ -228,14 +236,16 @@ _insert_name(struct handle_storage *s, const char * name, uint32_t handle) {
 		}
 	}
 	char * result = mtask_strdup(name);
-
+    // 一直在头部插入 实际上这样插入后 name 会按长度大小排好序 这样就能使用二分查找了
 	_insert_name_before(s, result, handle, begin);
 
 	return result;
 }
-
+// name与handle绑定
+// 给服务注册一个名称的时候会用到该函数
 const char * 
-mtask_handle_namehandle(uint32_t handle, const char *name) {
+mtask_handle_namehandle(uint32_t handle, const char *name)
+{
 	rwlock_wlock(&H->lock);
 
 	const char * ret = _insert_name(H, name, handle);

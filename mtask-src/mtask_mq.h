@@ -17,26 +17,33 @@ struct mtask_message {
 #define MESSAGE_TYPE_SHIFT ((sizeof(size_t)-1) * 8)
 
 struct message_queue;//消息队列
-
-void mtask_globalmq_push(struct message_queue * queue);//压入全局队列
-struct message_queue * mtask_globalmq_pop(void);       //弹出全局队列
-
-struct message_queue * mtask_mq_create(uint32_t handle);//创建消息队列
-void mtask_mq_mark_release(struct message_queue *q);    //标记释放消息队列
+//压入全局队列
+void mtask_globalmq_push(struct message_queue * queue);
+//弹出全局队列
+struct message_queue * mtask_globalmq_pop(void);
+//创建消息队列
+struct message_queue * mtask_mq_create(uint32_t handle);
+//标记释放消息队列
+void mtask_mq_mark_release(struct message_queue *q);
 
 typedef void (*message_drop)(struct mtask_message *, void *);
 
 void mtask_mq_release(struct message_queue *q, message_drop drop_func, void *ud);
-uint32_t mtask_mq_handle(struct message_queue *);//消息队列的句柄
+//消息队列的句柄
+uint32_t mtask_mq_handle(struct message_queue *);
 
 // 0 for success
-int mtask_mq_pop(struct message_queue *q, struct mtask_message *message);//消息出队列
-void mtask_mq_push(struct message_queue *q, struct mtask_message *message);//消息入队列
+//消息出队列
+int mtask_mq_pop(struct message_queue *q, struct mtask_message *message);
+//消息入队列
+void mtask_mq_push(struct message_queue *q, struct mtask_message *message);
 
 // return the length of message queue, for debug
-int mtask_mq_length(struct message_queue *q);//消息队列长度
-int mtask_mq_overload(struct message_queue *q);
+//消息队列长度
+int mtask_mq_length(struct message_queue *q);
 
-void mtask_mq_init();//全局消息队列的初始化
+int mtask_mq_overload(struct message_queue *q);
+//全局消息队列的初始化
+void mtask_mq_init();
 
 #endif

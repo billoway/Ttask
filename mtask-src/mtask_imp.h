@@ -12,11 +12,11 @@ struct mtask_config {
 	const char * logservice;//日志服务 默认logger
 };
 
-#define THREAD_WORKER 0
-#define THREAD_MAIN 1       //主线程pthread_key的值 
-#define THREAD_SOCKET 2
-#define THREAD_TIMER 3
-#define THREAD_MONITOR 4
+#define THREAD_WORKER   0
+#define THREAD_MAIN     1       //主线程pthread_key的值
+#define THREAD_SOCKET   2
+#define THREAD_TIMER    3
+#define THREAD_MONITOR  4
 
 void mtask_start(struct mtask_config * config);
 

@@ -9,7 +9,8 @@
 #include "mtask_daemon.h"
 
 static int
-check_pid(const char *pidfile) {
+check_pid(const char *pidfile)
+{
 	int pid = 0;
 	FILE *f = fopen(pidfile,"r");
 	if (f == NULL)

@@ -1,3 +1,11 @@
+#include <pthread.h>
+
+#include <string.h>
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdbool.h>
+
 #include "mtask.h"
 
 #include "mtask_server.h"
@@ -13,13 +21,6 @@
 #include "mtask_spinlock.h"
 #include "mtask_atomic.h"
 
-#include <pthread.h>
-
-#include <string.h>
-#include <assert.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdbool.h>
 
 
 //mtask主要功能，初始化组件、加载服务和通知服务
@@ -41,6 +42,7 @@
 #define CHECKCALLING_DECL
 
 #endif
+// mtask 主要功能 加载服务和通知服务
 /*
  * 一个模块(.so)加载到mtask框架中，创建出来的一个实例就是一个服务，
  * 为每个服务分配一个mtask_context结构
@@ -58,7 +60,7 @@ struct mtask_context {
     uint64_t cpu_start;	// in microsec
 	char result[32];    //保存命令执行返回结果
 	uint32_t handle;    //服务的句柄
-	int session_id;
+	int session_id;     //会话id
 	int ref;            //ref引用计数
     int message_count;  //消息数量
 	bool init;          //是否实例化
@@ -98,7 +100,8 @@ context_dec()
 }
 
 uint32_t 
-mtask_current_handle(void) {
+mtask_current_handle(void)
+{
 	if (G_NODE.init) {
 		void * handle = pthread_getspecific(G_NODE.handle_key);
 		return (uint32_t)(uintptr_t)handle;
@@ -109,12 +112,13 @@ mtask_current_handle(void) {
 }
 
 static void
-id_to_hex(char * str, uint32_t id) {
+id_to_hex(char * str, uint32_t id)
+{
 	int i;
 	static char hex[16] = { '0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F' };
 	str[0] = ':';
-	for (i=0;i<8;i++) {
-		str[i+1] = hex[(id >> ((7-i) * 4))&0xf];
+	for (i=0;i<8;i++) {//转成 16 进制的 0xff ff ff ff 8位
+		str[i+1] = hex[(id >> ((7-i) * 4))&0xf];//依次取 4位 从最高的4位 开始取 在纸上画一下就清楚了
 	}
 	str[9] = '\0';
 }
@@ -124,7 +128,8 @@ struct drop_t {
 };
 
 static void
-drop_message(struct mtask_message *msg, void *ud) {
+drop_message(struct mtask_message *msg, void *ud)
+{
 	struct drop_t *d = ud;
 	mtask_free(msg->data);
 	uint32_t source = d->handle;
@@ -132,7 +137,7 @@ drop_message(struct mtask_message *msg, void *ud) {
 	// report error to the message source
 	mtask_send(NULL, source, msg->source, PTYPE_ERROR, 0, NULL, 0);
 }
-
+//创建新的mtask_context结构
 struct mtask_context * 
 mtask_context_new(const char * name, const char *param)
 {
@@ -195,9 +200,10 @@ mtask_context_new(const char * name, const char *param)
 		return NULL;
 	}
 }
-
+//新会话 在mtask_context.session_id上累加
 int
-mtask_context_newsession(struct mtask_context *ctx) {
+mtask_context_newsession(struct mtask_context *ctx)
+{
 	// session always be a positive number
 	int session = ++ctx->session_id;
 	if (session <= 0) {
@@ -206,56 +212,61 @@ mtask_context_newsession(struct mtask_context *ctx) {
 	}
 	return session;
 }
-
-void 
-mtask_context_grab(struct mtask_context *ctx) {
+//获取mtask_context 添加引用计数
+void
+mtask_context_grab(struct mtask_context *ctx)
+{
 	ATOM_INC(&ctx->ref);
 }
-
+//回收 mtask_context
 void
-mtask_context_reserve(struct mtask_context *ctx) {
-	mtask_context_grab(ctx);
+mtask_context_reserve(struct mtask_context *ctx)
+{
+	mtask_context_grab(ctx);//减少引用计数
 	// don't count the context reserved, because mtask abort (the worker threads terminate) only when the total context is 0 .
 	// the reserved context will be release at last.
-	context_dec();
+	context_dec();//减少服务数量
 }
 
 static void 
-delete_context(struct mtask_context *ctx) {
+delete_context(struct mtask_context *ctx)
+{
 	if (ctx->logfile) {
-		fclose(ctx->logfile);
+		fclose(ctx->logfile);//关闭日志文件
 	}
-	mtask_module_instance_release(ctx->mod, ctx->instance);
-	mtask_mq_mark_release(ctx->queue);
+	mtask_module_instance_release(ctx->mod, ctx->instance); //xxx_release
+	mtask_mq_mark_release(ctx->queue);//标记消息队列删除
 	CHECKCALLING_DESTROY(ctx)
-	mtask_free(ctx);
-	context_dec();
+	mtask_free(ctx);//释放ctx
+	context_dec();//减少服务数量
 }
 //减少引用计数 引用计数为0删除ctx
 struct mtask_context * 
 mtask_context_release(struct mtask_context *ctx)
 {
-	if (ATOM_DEC(&ctx->ref) == 0) {
+	if (ATOM_DEC(&ctx->ref) == 0) {//减少引用计数 引用计数为0删除ctx
 		delete_context(ctx);
 		return NULL;
 	}
 	return ctx;
 }
-
+//往handle标识的服务中插入一条消息
 int
-mtask_context_push(uint32_t handle, struct mtask_message *message) {
+mtask_context_push(uint32_t handle, struct mtask_message *message)
+{   //通过handle找到H中保存的mtask_context ref+1
 	struct mtask_context * ctx = mtask_handle_grab(handle);
 	if (ctx == NULL) {
 		return -1;
 	}
-	mtask_mq_push(ctx->queue, message);
-	mtask_context_release(ctx);
+	mtask_mq_push(ctx->queue, message);//将消息放入ctx的消息队列中
+	mtask_context_release(ctx);//ref -1
 
 	return 0;
 }
-
+//将服务标记为无尽循环状态
 void 
-mtask_context_endless(uint32_t handle) {
+mtask_context_endless(uint32_t handle)
+{
 	struct mtask_context * ctx = mtask_handle_grab(handle);
 	if (ctx == NULL) {
 		return;
@@ -263,18 +274,20 @@ mtask_context_endless(uint32_t handle) {
 	ctx->endless = true;
 	mtask_context_release(ctx);
 }
-
+// 判断是否是远程消息
 int 
-mtask_isremote(struct mtask_context * ctx, uint32_t handle, int * harbor) {
+mtask_isremote(struct mtask_context * ctx, uint32_t handle, int * harbor)
+{
 	int ret = mtask_harbor_message_isremote(handle);
 	if (harbor) {
-		*harbor = (int)(handle >> HANDLE_REMOTE_SHIFT);
+		*harbor = (int)(handle >> HANDLE_REMOTE_SHIFT);//返回harbor(注：高8位存的是harbor) yes
 	}
 	return ret;
 }
-
+//消息调度
 static void
-dispatch_message(struct mtask_context *ctx, struct mtask_message *msg) {
+dispatch_message(struct mtask_context *ctx, struct mtask_message *msg)
+{
 	assert(ctx->init);
 	CHECKCALLING_BEGIN(ctx)
 	pthread_setspecific(G_NODE.handle_key, (void *)(uintptr_t)(ctx->handle));
@@ -283,9 +296,20 @@ dispatch_message(struct mtask_context *ctx, struct mtask_message *msg) {
 	if (ctx->logfile) {
 		mtask_log_output(ctx->logfile, msg->source, type, msg->session, msg->data, sz);
 	}
-	if (!ctx->cb(ctx, ctx->cb_ud, type, msg->session, msg->source, msg->data, sz)) {
-		mtask_free(msg->data);
-	} 
+    ++ctx->message_count;
+    
+    int reserve_msg;
+    if (ctx->profile) { //有性能开关 则计时处理  调度执行服务模块中的回调函数
+        ctx->cpu_start = mtask_thread_time();
+        reserve_msg = ctx->cb(ctx, ctx->cb_ud, type, msg->session, msg->source, msg->data, sz);
+        uint64_t cost_time = mtask_thread_time() - ctx->cpu_start;
+        ctx->cpu_cost += cost_time;
+    } else {
+        reserve_msg = ctx->cb(ctx, ctx->cb_ud, type, msg->session, msg->source, msg->data, sz);
+    }
+    if (!reserve_msg) {
+        mtask_free(msg->data); //释放数据
+    }
 	CHECKCALLING_END(ctx)
 }
 
@@ -299,16 +323,17 @@ mtask_context_dispatchall(struct mtask_context * ctx)
 		dispatch_message(ctx, &msg);
 	}
 }
-
+//消息调度
 struct message_queue * 
-mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q, int weight) {
+mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q, int weight)
+{
 	if (q == NULL) {
-		q = mtask_globalmq_pop();
+		q = mtask_globalmq_pop();//全局消息列表队列中弹出一个消息队列
 		if (q==NULL)
 			return NULL;
 	}
 
-	uint32_t handle = mtask_mq_handle(q);
+	uint32_t handle = mtask_mq_handle(q);//得到消息队列所属的服务句柄
 
 	struct mtask_context * ctx = mtask_handle_grab(handle);
 	if (ctx == NULL) {
@@ -321,24 +346,24 @@ mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q
 	struct mtask_message msg;
 
 	for (i=0;i<n;i++) {
-		if (mtask_mq_pop(q,&msg)) {
-			mtask_context_release(ctx);
+		if (mtask_mq_pop(q,&msg)) {//从消息队列q中取出取消息msg
+			mtask_context_release(ctx);//返回1说明消息队列中已经没有消息 释放 Context 结构
 			return mtask_globalmq_pop();
 		} else if (i==0 && weight >= 0) {
-			n = mtask_mq_length(q);
+			n = mtask_mq_length(q);//获取消息的长度
 			n >>= weight;
 		}
 		int overload = mtask_mq_overload(q);
 		if (overload) {
 			mtask_error(ctx, "May overload, message queue length = %d", overload);
 		}
-
+        // 消息处理完，调用该函数，以便监控线程知道该消息已处理
 		mtask_monitor_trigger(sm, msg.source , handle);
 
 		if (ctx->cb == NULL) {
-			mtask_free(msg.data);
+			mtask_free(msg.data);//释放数据
 		} else {
-			dispatch_message(ctx, &msg);
+			dispatch_message(ctx, &msg);//调度消息
 		}
 
 		mtask_monitor_trigger(sm, 0,0);
@@ -358,7 +383,8 @@ mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q
 }
 
 static void
-copy_name(char name[GLOBALNAME_LENGTH], const char * addr) {
+copy_name(char name[GLOBALNAME_LENGTH], const char * addr)
+{
 	int i;
 	for (i=0;i<GLOBALNAME_LENGTH && addr[i];i++) {
 		name[i] = addr[i];
@@ -369,7 +395,8 @@ copy_name(char name[GLOBALNAME_LENGTH], const char * addr) {
 }
 
 uint32_t 
-mtask_queryname(struct mtask_context * context, const char * name) {
+mtask_queryname(struct mtask_context * context, const char * name)
+{
 	switch(name[0]) {
 	case ':':
 		return (uint32_t)strtoul(name+1,NULL,16);
@@ -381,7 +408,8 @@ mtask_queryname(struct mtask_context * context, const char * name) {
 }
 
 static void
-handle_exit(struct mtask_context * context, uint32_t handle) {
+handle_exit(struct mtask_context * context, uint32_t handle)
+{
 	if (handle == 0) {
 		handle = context->handle;
 		mtask_error(context, "KILL self");
@@ -402,7 +430,8 @@ struct command_func {
 };
 
 static const char *
-cmd_timeout(struct mtask_context * context, const char * param) {
+cmd_timeout(struct mtask_context * context, const char * param)
+{
 	char * session_ptr = NULL;
 	int ti = (int)strtol(param, &session_ptr, 10);
 	int session = mtask_context_newsession(context);
@@ -412,7 +441,8 @@ cmd_timeout(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_reg(struct mtask_context * context, const char * param) {
+cmd_reg(struct mtask_context * context, const char * param)
+{
 	if (param == NULL || param[0] == '\0') {
 		sprintf(context->result, ":%x", context->handle);
 		return context->result;
@@ -461,13 +491,15 @@ cmd_name(struct mtask_context * context, const char * param)
 
 
 static const char *
-cmd_exit(struct mtask_context * context, const char * param) {
+cmd_exit(struct mtask_context * context, const char * param)
+{
 	handle_exit(context, 0);
 	return NULL;
 }
 
 static uint32_t
-tohandle(struct mtask_context * context, const char * param) {
+tohandle(struct mtask_context * context, const char * param)
+{
 	uint32_t handle = 0;
 	if (param[0] == ':') {
 		handle = (uint32_t)strtoul(param+1, NULL, 16);
@@ -481,7 +513,8 @@ tohandle(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_kill(struct mtask_context * context, const char * param) {
+cmd_kill(struct mtask_context * context, const char * param)
+{
 	uint32_t handle = tohandle(context, param);
 	if (handle) {
 		handle_exit(context, handle);
@@ -490,7 +523,8 @@ cmd_kill(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_launch(struct mtask_context * context, const char * param) {
+cmd_launch(struct mtask_context * context, const char * param)
+{
 	size_t sz = strlen(param);
 	char tmp[sz+1];
 	strcpy(tmp,param);
@@ -507,12 +541,14 @@ cmd_launch(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_getenv(struct mtask_context * context, const char * param) {
+cmd_getenv(struct mtask_context * context, const char * param)
+{
 	return mtask_getenv(param);
 }
 
 static const char *
-cmd_setenv(struct mtask_context * context, const char * param) {
+cmd_setenv(struct mtask_context * context, const char * param)
+{
 	size_t sz = strlen(param);
 	char key[sz+1];
 	int i;
@@ -530,16 +566,16 @@ cmd_setenv(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_starttime(struct mtask_context * context, const char * param) {
+cmd_starttime(struct mtask_context * context, const char * param)
+{
 	uint32_t sec = mtask_start_time();
 	sprintf(context->result,"%u",sec);
 	return context->result;
 }
 
-
-
 static const char *
-cmd_abort(struct mtask_context * context, const char * param) {
+cmd_abort(struct mtask_context * context, const char * param)
+{
 	mtask_handle_retireall();
 	return NULL;
 }
@@ -594,9 +630,9 @@ cmd_stat(struct mtask_context * context, const char * param)
     return context->result;
 }
 
-
 static const char *
-cmd_logon(struct mtask_context * context, const char * param) {
+cmd_logon(struct mtask_context * context, const char * param)
+{
 	uint32_t handle = tohandle(context, param);
 	if (handle == 0)
 		return NULL;
@@ -619,7 +655,8 @@ cmd_logon(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_logoff(struct mtask_context * context, const char * param) {
+cmd_logoff(struct mtask_context * context, const char * param)
+{
 	uint32_t handle = tohandle(context, param);
 	if (handle == 0)
 		return NULL;
@@ -638,7 +675,8 @@ cmd_logoff(struct mtask_context * context, const char * param) {
 }
 
 static const char *
-cmd_signal(struct mtask_context * context, const char * param) {
+cmd_signal(struct mtask_context * context, const char * param)
+{
 	uint32_t handle = tohandle(context, param);
 	if (handle == 0)
 		return NULL;
@@ -676,9 +714,17 @@ static struct command_func cmd_funcs[] = {
     { "SIGNAL", cmd_signal },
 	{ NULL, NULL },
 };
-
+// 使用了简单的文本协议 来 cmd 操作 mtask的服务
+/*
+ * mtask 提供了一个叫做 mtask_command 的 C API ，作为基础服务的统一入口。
+ * 它接收一个字符串参数，返回一个字符串结果。你可以看成是一种文本协议。
+ * 但 mtask_command 保证在调用过程中，不会切出当前的服务线程，导致状态改变的不可预知性。
+ * 其每个功能的实现，其实也是内嵌在 mtask 的源代码中，相同上层服务，还是比较高效的。
+ *（因为可以访问许多内存 api ，而不必用消息通讯的方式实现）
+ */
 const char * 
-mtask_command(struct mtask_context * context, const char * cmd , const char * param) {
+mtask_command(struct mtask_context * context, const char * cmd , const char * param)
+{
 	struct command_func * method = &cmd_funcs[0];
 	while(method->name) {
 		if (strcmp(cmd, method->name) == 0) {
@@ -691,13 +737,16 @@ mtask_command(struct mtask_context * context, const char * cmd , const char * pa
 }
 
 static void
-_filter_args(struct mtask_context * context, int type, int *session, void ** data, size_t * sz) {
+_filter_args(struct mtask_context * context, int type, int *session, void ** data, size_t * sz)
+{
 	int needcopy = !(type & PTYPE_TAG_DONTCOPY);
+    // type中含有 PTYPE_TAG_ALLOCSESSION ，则session必须是0
 	int allocsession = type & PTYPE_TAG_ALLOCSESSION;
 	type &= 0xff;
 
 	if (allocsession) {
 		assert(*session == 0);
+        // 分配一个新的 session id
 		*session = mtask_context_newsession(context);
 	}
 
@@ -710,9 +759,14 @@ _filter_args(struct mtask_context * context, int type, int *session, void ** dat
 
 	*sz |= (size_t)type << MESSAGE_TYPE_SHIFT;
 }
-
+/*
+ * 向handle为destination的服务发送消息(注：handle为destination的服务不一定是本地的)
+ * type中含有 PTYPE_TAG_ALLOCSESSION ，则session必须是0
+ * type中含有 PTYPE_TAG_DONTCOPY ，则不需要拷贝数据
+ */
 int
-mtask_send(struct mtask_context * context, uint32_t source, uint32_t destination , int type, int session, void * data, size_t sz) {
+mtask_send(struct mtask_context * context, uint32_t source, uint32_t destination , int type, int session, void * data, size_t sz)
+{
 	if ((sz & MESSAGE_TYPE_MASK) != sz) {
 		mtask_error(context, "The message to %x is too large", destination);
 		mtask_free(data);
@@ -727,52 +781,58 @@ mtask_send(struct mtask_context * context, uint32_t source, uint32_t destination
 	if (destination == 0) {
 		return session;
 	}
+    //destination是否远程消息
 	if (mtask_harbor_message_isremote(destination)) {
 		struct remote_message * rmsg = mtask_malloc(sizeof(*rmsg));
 		rmsg->destination.handle = destination;
 		rmsg->message = data;
 		rmsg->sz = sz;
-		mtask_harbor_send(rmsg, source, session);
+		mtask_harbor_send(rmsg, source, session);//将消息发送到harbar 有barbor发送到其他远程节点
 	} else {
-		struct mtask_message smsg;
+		struct mtask_message smsg;//本机消息直接压入对应的消息队列
 		smsg.source = source;
 		smsg.session = session;
 		smsg.data = data;
 		smsg.sz = sz;
-
+        //消息压入目的服务的消息队列
 		if (mtask_context_push(destination, &smsg)) {
 			mtask_free(data);
 			return -1;
 		}
 	}
-	return session;
+	return session;//返回sesson信息
 }
 
 int
-mtask_sendname(struct mtask_context * context, uint32_t source, const char * addr , int type, int session, void * data, size_t sz) {
+mtask_sendname(struct mtask_context * context, uint32_t source, const char * addr , int type, int session, void * data, size_t sz)
+{
 	if (source == 0) {
 		source = context->handle;
 	}
 	uint32_t des = 0;
-	if (addr[0] == ':') {
-		des = strtoul(addr+1, NULL, 16);
+	if (addr[0] == ':') {   //直接的handle地址
+        //字符串转换为unsigned long 例如开始是：1234这种格式说明直接的handle
+		des = (uint32_t)strtoul(addr+1, NULL, 16);
 	} else if (addr[0] == '.') {
-		des = mtask_handle_findname(addr + 1);
+        // . 说明是以名字开始的地址 需要根据名字查找 对应的 handle
+		des = mtask_handle_findname(addr + 1);//根据服务名字找到对应的handle
 		if (des == 0) {
+            //不需要copy的消息类型
 			if (type & PTYPE_TAG_DONTCOPY) {
 				mtask_free(data);
 			}
 			return -1;
 		}
 	} else {
+        // 其他的目的地址 即远程的地址
 		_filter_args(context, type, &session, (void **)&data, &sz);
-
+        //生成远程消息
 		struct remote_message * rmsg = mtask_malloc(sizeof(*rmsg));
 		copy_name(rmsg->destination.name, addr);
 		rmsg->destination.handle = 0;
 		rmsg->message = data;
 		rmsg->sz = sz;
-
+        //将消息放入harbor服务的消息队列
 		mtask_harbor_send(rmsg, source, session);
 		return session;
 	}
@@ -781,24 +841,27 @@ mtask_sendname(struct mtask_context * context, uint32_t source, const char * add
 }
 
 uint32_t 
-mtask_context_handle(struct mtask_context *ctx) {
+mtask_context_handle(struct mtask_context *ctx)
+{
 	return ctx->handle;
 }
-
-void 
-mtask_callback(struct mtask_context * context, void *ud, mtask_cb cb) {
-	context->cb = cb;
-	context->cb_ud = ud;
-}
-
+//设置服务的mtask_context 的cb 和cb字段，服务的回调函数和服务的数据结构字段 例如 snlua logger gate等
 void
-mtask_context_send(struct mtask_context * ctx, void * msg, size_t sz, uint32_t source, int type, int session) {
+mtask_callback(struct mtask_context * context, void *ud, mtask_cb cb)
+{
+	context->cb = cb;       //服务的消息处理函数
+	context->cb_ud = ud;    //服务结构
+}
+//向本地ctx服务发送一条消息
+void
+mtask_context_send(struct mtask_context * ctx, void * msg, size_t sz, uint32_t source, int type, int session)
+{
 	struct mtask_message smsg;
 	smsg.source = source;
 	smsg.session = session;
 	smsg.data = msg;
 	smsg.sz = sz | (size_t)type << MESSAGE_TYPE_SHIFT;
-
+    //压入消息队列
 	mtask_mq_push(ctx->queue, &smsg);
 }
 //初始化mtask_node 创建线程局部存储key
@@ -817,8 +880,9 @@ mtask_globalinit(void)
 }
 
 void 
-mtask_globalexit(void) {
-	pthread_key_delete(G_NODE.handle_key);
+mtask_globalexit(void)
+{
+	pthread_key_delete(G_NODE.handle_key);//删除线程局部存储的key
 }
  //设置线程局部存储key
 void
@@ -828,3 +892,8 @@ mtask_initthread(int m)
 	pthread_setspecific(G_NODE.handle_key, (void *)v);
 }
 
+void
+mtask_profile_enable(int enable)
+{
+    G_NODE.profile = (bool)enable;
+}

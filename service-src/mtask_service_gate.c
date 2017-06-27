@@ -102,7 +102,7 @@ _ctrl(struct gate * g, const void * msg, int sz) {
 	}
 	if (memcmp(command,"kick",i)==0) {
 		_parm(tmp, sz, i);
-		int uid = strtol(command , NULL, 10);
+		int uid = (int)strtol(command , NULL, 10);
 		int id = hashid_lookup(&g->hash, uid);
 		if (id>=0) {
 			mtask_socket_close(ctx, uid);
@@ -116,13 +116,13 @@ _ctrl(struct gate * g, const void * msg, int sz) {
 		if (client == NULL) {
 			return;
 		}
-		int id = strtol(idstr , NULL, 10);
+		int id = (int)strtol(idstr , NULL, 10);
 		char * agent = strsep(&client, " ");
 		if (client == NULL) {
 			return;
 		}
-		uint32_t agent_handle = strtoul(agent+1, NULL, 16);
-		uint32_t client_handle = strtoul(client+1, NULL, 16);
+		uint32_t agent_handle = (uint32_t)strtoul(agent+1, NULL, 16);
+		uint32_t client_handle = (uint32_t)strtoul(client+1, NULL, 16);
 		_forward_agent(g, id, agent_handle, client_handle);
 		return;
 	}
