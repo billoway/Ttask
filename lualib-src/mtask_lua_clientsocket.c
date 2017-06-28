@@ -17,12 +17,13 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define CACHE_SIZE 0x1000	
+#define CACHE_SIZE 0x1000	//0xfff + 1 = 2^12 +1 = 4kb + 1
 
 static int
-lconnect(lua_State *L) {
+lconnect(lua_State *L)
+{
 	const char * addr = luaL_checkstring(L, 1);
-	int port = luaL_checkinteger(L, 2);
+	int port = (int)luaL_checkinteger(L, 2);
 	int fd = socket(AF_INET,SOCK_STREAM,0);
 	struct sockaddr_in my_addr;
 
@@ -45,17 +46,19 @@ lconnect(lua_State *L) {
 }
 
 static int
-lclose(lua_State *L) {
-	int fd = luaL_checkinteger(L, 1);
+lclose(lua_State *L)
+{
+	int fd = (int)luaL_checkinteger(L, 1);
 	close(fd);
 
 	return 0;
 }
 
 static void
-block_send(lua_State *L, int fd, const char * buffer, int sz) {
+block_send(lua_State *L, int fd, const char * buffer, int sz)
+{
 	while(sz > 0) {
-		int r = send(fd, buffer, sz, 0);
+		int r = (int)send(fd, buffer, sz, 0);
 		if (r < 0) {
 			if (errno == EAGAIN || errno == EINTR)
 				continue;
@@ -71,9 +74,10 @@ block_send(lua_State *L, int fd, const char * buffer, int sz) {
 	string message
  */
 static int
-lsend(lua_State *L) {
+lsend(lua_State *L)
+{
 	size_t sz = 0;
-	int fd = luaL_checkinteger(L,1);
+	int fd = (int)luaL_checkinteger(L,1);
 	const char * msg = luaL_checklstring(L, 2, &sz);
 
 	block_send(L, fd, msg, (int)sz);
@@ -97,11 +101,12 @@ struct socket_buffer {
 };
 
 static int
-lrecv(lua_State *L) {
-	int fd = luaL_checkinteger(L,1);
+lrecv(lua_State *L)
+{
+	int fd = (int)luaL_checkinteger(L,1);
 
 	char buffer[CACHE_SIZE];
-	int r = recv(fd, buffer, CACHE_SIZE, 0);
+	int r = (int)recv(fd, buffer, CACHE_SIZE, 0);
 	if (r == 0) {
 		lua_pushliteral(L, "");
 		// close
@@ -118,7 +123,8 @@ lrecv(lua_State *L) {
 }
 
 static int
-lusleep(lua_State *L) {
+lusleep(lua_State *L)
+{
 	int n = luaL_checknumber(L, 1);
 	usleep(n);
 	return 0;
@@ -136,7 +142,8 @@ struct queue {
 };
 
 static void *
-readline_stdin(void * arg) {
+readline_stdin(void * arg)
+{
 	struct queue * q = arg;
 	char tmp[1024];
 	while (!feof(stdin)) {
@@ -144,7 +151,7 @@ readline_stdin(void * arg) {
 			// read stdin failed
 			exit(1);
 		}
-		int n = strlen(tmp) -1;
+		int n = (int)strlen(tmp) -1;
 
 		char * str = malloc(n+1);
 		memcpy(str, tmp, n);
@@ -166,7 +173,8 @@ readline_stdin(void * arg) {
 }
 
 static int
-lreadstdin(lua_State *L) {
+lreadstdin(lua_State *L)
+{
 	struct queue *q = lua_touserdata(L, lua_upvalueindex(1));
 	pthread_mutex_lock(&q->lock);
 	if (q->head == q->tail) {
@@ -184,7 +192,8 @@ lreadstdin(lua_State *L) {
 }
 
 int
-luaopen_clientsocket(lua_State *L) {
+luaopen_clientsocket(lua_State *L)
+{
 	luaL_checkversion(L);
 	luaL_Reg l[] = {
 		{ "connect", lconnect },

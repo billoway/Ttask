@@ -10,6 +10,8 @@
 #include <string.h>
 #include <assert.h>
 
+//核心库，封装mtask给lua使用  mtask.so
+
 struct snlua {
 	lua_State * L;
 	struct mtask_context * ctx;
@@ -17,9 +19,10 @@ struct snlua {
 };
 
 static int
-traceback (lua_State *L) {
+traceback (lua_State *L)
+{
 	const char *msg = lua_tostring(L, 1);
-	if (msg)
+	if (msg) //将栈L的栈回溯信息压栈;msg它会附加到栈回溯信息之前,从第一层开始做展开回溯。
 		luaL_traceback(L, L, msg, 1);
 	else {
 		lua_pushliteral(L, "(no error message)");
@@ -28,7 +31,8 @@ traceback (lua_State *L) {
 }
 
 static int
-_cb(struct mtask_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz) {
+_cb(struct mtask_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
+{
 	lua_State *L = ud;
 	int trace = 1;
 	int r;
@@ -74,24 +78,32 @@ _cb(struct mtask_context * context, void * ud, int type, int session, uint32_t s
 }
 
 static int
-forward_cb(struct mtask_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz) {
+forward_cb(struct mtask_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
+{
 	_cb(context, ud, type, session, source, msg, sz);
 	// don't delete msg in forward mode.
 	return 1;
 }
-
+//设置mtask_context总的cb和cb_ud 分别为_cb何lua_state 同时记录lua_function到注册表中
 static int
-_callback(lua_State *L) {
+_callback(lua_State *L)
+{
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
-	int forward = lua_toboolean(L, 2);
-	luaL_checktype(L,1,LUA_TFUNCTION);
-	lua_settop(L,1);
+	int forward = lua_toboolean(L, 2);//是否转发
+	luaL_checktype(L,1,LUA_TFUNCTION);//检测栈底是否为lua_function
+	lua_settop(L,1);    //删除栈底之后的栈
 	lua_rawsetp(L, LUA_REGISTRYINDEX, _cb);
-
-	lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
+    //等价于 t[k] = v ， 这里的 t 是指给定索引处的表， k 是指针 p 对应的轻量用户数据。 而 v 是栈顶的值。
+    //void lua_rawsetp (lua_State *L, int index, const void *p);
+    //_G[LUA_REGISTRYINDEX] [_cb] = L[1], 相当于将栈顶出的函数设置在注册表中，并且使用_cb作为key L[1]出栈
+    
+    //LUA_RIDX_MAINTHREAD 注册表中这个索引下是状态机的主线程
+	lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);//G[LUA_REGISTRYINDEX][LUA_RIDX_MAINTHREAD]值入栈 注册表中 key为LUA_RIDX_MAINTHREAD的值入栈
+    //栈顶的值转换为lua_state  lua_tothread把给定索引处的值转换为一个 Lua 线程 （表示为 lua_State*）。
 	lua_State *gL = lua_tothread(L,-1);
 
 	if (forward) {
+        //mtask_context.cb设置为forward_cb  mtask_context.cb_ud设置为主线程
 		mtask_callback(context, gL, forward_cb);
 	} else {
 		mtask_callback(context, gL, _cb);
@@ -166,10 +178,15 @@ get_dest_string(lua_State *L, int index) {
 	 lightuserdata message_ptr
 	 integer len
  */
+// mtask_context_send mtask_sendname /mtask_send-》mtask_harbor_send | mtask_context_push
 static int
-_send(lua_State *L) {
+_send(lua_State *L)
+{
+    //如果给定索引处的值是一个完全用户数据,函数返回其内存块的地址.
+    //如果值是一个轻量用户数据,那么就返回它表示的指针.
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
-	uint32_t dest = (uint32_t)lua_tointeger(L, 1);
+    //获取目的地址 string 或者 number
+    uint32_t dest = (uint32_t)lua_tointeger(L, 1);
 	const char * dest_string = NULL;
 	if (dest == 0) {
 		if (lua_type(L,1) == LUA_TNUMBER) {
@@ -177,18 +194,19 @@ _send(lua_State *L) {
 		}
 		dest_string = get_dest_string(L, 1);
 	}
-
-	int type = luaL_checkinteger(L, 2);
+    //消息类型
+	int type = (int)luaL_checkinteger(L, 2);
+    //session
 	int session = 0;
 	if (lua_isnil(L,3)) {
 		type |= PTYPE_TAG_ALLOCSESSION;
 	} else {
-		session = luaL_checkinteger(L,3);
+		session = (int)luaL_checkinteger(L,3);
 	}
-
+    //消息数据是字符串或者内存数据 string 和 lightuserdata
 	int mtype = lua_type(L,4);
 	switch (mtype) {
-	case LUA_TSTRING: {
+	case LUA_TSTRING: {//字符串数据
 		size_t len = 0;
 		void * msg = (void *)lua_tolstring(L,4,&len);
 		if (len == 0) {
@@ -201,9 +219,9 @@ _send(lua_State *L) {
 		}
 		break;
 	}
-	case LUA_TLIGHTUSERDATA: {
+	case LUA_TLIGHTUSERDATA: { //内存数据
 		void * msg = lua_touserdata(L,4);
-		int size = luaL_checkinteger(L,5);
+		int size = (int)luaL_checkinteger(L,5);
 		if (dest_string) {
 			session = mtask_sendname(context, 0, dest_string, type | PTYPE_TAG_DONTCOPY, session, msg, size);
 		} else {
@@ -219,8 +237,8 @@ _send(lua_State *L) {
 		// todo: maybe throw an error would be better
 		return 0;
 	}
-	lua_pushinteger(L,session);
-	return 1;
+	lua_pushinteger(L,session);//seeeion号入栈 也就是返回session
+	return 1;//返回值的个数（入栈个数）
 }
 
 static int
@@ -232,8 +250,8 @@ _redirect(lua_State *L) {
 		dest_string = get_dest_string(L, 1);
 	}
 	uint32_t source = (uint32_t)luaL_checkinteger(L,2);
-	int type = luaL_checkinteger(L,3);
-	int session = luaL_checkinteger(L,4);
+	int type = (int)luaL_checkinteger(L,3);
+	int session = (int)luaL_checkinteger(L,4);
 
 	int mtype = lua_type(L,5);
 	switch (mtype) {
@@ -252,7 +270,7 @@ _redirect(lua_State *L) {
 	}
 	case LUA_TLIGHTUSERDATA: {
 		void * msg = lua_touserdata(L,5);
-		int size = luaL_checkinteger(L,6);
+		int size = (int)luaL_checkinteger(L,6);
 		if (dest_string) {
 			session = mtask_sendname(context, source, dest_string, type | PTYPE_TAG_DONTCOPY, session, msg, size);
 		} else {
@@ -279,7 +297,7 @@ _tostring(lua_State *L) {
 		return 0;
 	}
 	char * msg = lua_touserdata(L,1);
-	int sz = luaL_checkinteger(L,2);
+	int sz = (int)luaL_checkinteger(L,2);
 	lua_pushlstring(L,msg,sz);
 	return 1;
 }
@@ -300,7 +318,7 @@ static int
 lpackstring(lua_State *L) {
 	_luaseri_pack(L);
 	char * str = (char *)lua_touserdata(L, -2);
-	int sz = lua_tointeger(L, -1);
+	int sz = (int)lua_tointeger(L, -1);
 	lua_pushlstring(L, str, sz);
 	mtask_free(str);
 	return 1;
@@ -326,8 +344,17 @@ ltrash(lua_State *L) {
 	return 0;
 }
 
+static int
+lnow(lua_State *L)
+{
+    uint64_t ti = mtask_now(); //启动时长
+    lua_pushinteger(L, ti);
+    return 1;
+}
+
 int
-luaopen_mtask_core(lua_State *L) {
+luaopen_mtask_core(lua_State *L)
+{
 	luaL_checkversion(L);
 
 	luaL_Reg l[] = {
@@ -344,6 +371,7 @@ luaopen_mtask_core(lua_State *L) {
 		{ "packstring", lpackstring },
 		{ "trash" , ltrash },
 		{ "callback", _callback },
+        { "now", lnow }, //节点进程启动时间
 		{ NULL, NULL },
 	};
 

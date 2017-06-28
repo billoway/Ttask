@@ -263,13 +263,14 @@ systime(uint32_t *sec, uint32_t *cs) {
 #else
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	*sec = tv.tv_sec; //秒数
+	*sec = (uint32_t)tv.tv_sec; //秒数
 	*cs = tv.tv_usec / 10000; //微秒数 单位是0.01
 #endif
 }
 // 返回系统开机到现在的时间，单位是百分之一秒 0.01s
 static uint64_t
-gettime() {
+gettime()
+{
 	uint64_t t;
 #if !defined(__APPLE__)
 

@@ -18,7 +18,7 @@
 #define MQ_IN_GLOBAL 1      //在全局队列中或者正在分发
 #define MQ_OVERLOAD 1024
 
-//消息队列结构
+//消息队列结构 sizeof(struct message_queue) = 56
 struct message_queue {
     struct spinlock lock;
     uint32_t handle;  //句柄
@@ -52,7 +52,7 @@ mtask_globalmq_push(struct message_queue * queue)
 	if(q->tail) {
 		q->tail->next = queue;
 		q->tail = queue;
-	} else {
+	} else { // 如果为空队列
 		q->head = q->tail = queue;
 	}
 	SPIN_UNLOCK(q)

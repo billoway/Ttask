@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-//mtask 内部消息结构
+//mtask 内部消息结构 sizeof(struct mtask_message) = 24
 struct mtask_message {
     uint32_t source; //源地址
     int session;     //会话
