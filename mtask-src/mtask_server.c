@@ -439,7 +439,7 @@ cmd_timeout(struct mtask_context * context, const char * param)
 	sprintf(context->result, "%d", session);
 	return context->result;
 }
-
+//C API 注册一个别名
 static const char *
 cmd_reg(struct mtask_context * context, const char * param)
 {
@@ -453,7 +453,7 @@ cmd_reg(struct mtask_context * context, const char * param)
 		return NULL;
 	}
 }
-
+//用来查询一个 . 开头的名字对应的地址。它是一个非阻塞 API ，不可以查询跨节点的全局名字。
 static const char *
 cmd_query(struct mtask_context * context, const char * param)
 {
@@ -466,7 +466,13 @@ cmd_query(struct mtask_context * context, const char * param)
 	}
 	return NULL;
 }
-
+//C API 为一个地址(服务)命名
+//这个名字一旦注册，是在 mtask 系统中通用的，你需要自己约定名字的管理的方法.
+//以 . 开头的名字是在同一 mtask 节点下有效的，跨节点的 mtask 服务对别的
+//节点下的 . 开头的名字不可见。不同的 mtask 节点可以定义相同的 . 开头的名字。
+//以字母开头的名字在整个 mtask 网络中都有效，你可以通过这种全局名字把消息发到其它节点的。
+//原则上，不鼓励滥用全局名字，它有一定的管理成本。
+//管用的方法是在业务层交换服务的数字地址，让服务自行记住其它服务的地址来传播消息。
 static const char *
 cmd_name(struct mtask_context * context, const char * param)
 {
@@ -511,7 +517,7 @@ tohandle(struct mtask_context * context, const char * param)
 
 	return handle;
 }
-
+//强行杀掉一个服务
 static const char *
 cmd_kill(struct mtask_context * context, const char * param)
 {
@@ -521,7 +527,7 @@ cmd_kill(struct mtask_context * context, const char * param)
 	}
 	return NULL;
 }
-
+// C API 启动一个 C 服务
 static const char *
 cmd_launch(struct mtask_context * context, const char * param)
 {
@@ -572,14 +578,14 @@ cmd_starttime(struct mtask_context * context, const char * param)
 	sprintf(context->result,"%u",sec);
 	return context->result;
 }
-
+//C API 退出 mtask 进程
 static const char *
 cmd_abort(struct mtask_context * context, const char * param)
 {
 	mtask_handle_retireall();
 	return NULL;
 }
-
+//C API 给当前 mtask 进程设置一个全局的服务监控
 static const char *
 cmd_monitor(struct mtask_context * context, const char * param)
 {
@@ -716,7 +722,6 @@ static struct command_func cmd_funcs[] = {
 };
 // 使用了简单的文本协议 来 cmd 操作 mtask的服务
 /*
- * mtask 提供了一个叫做 mtask_command 的 C API ，作为基础服务的统一入口。
  * 它接收一个字符串参数，返回一个字符串结果。你可以看成是一种文本协议。
  * 但 mtask_command 保证在调用过程中，不会切出当前的服务线程，导致状态改变的不可预知性。
  * 其每个功能的实现，其实也是内嵌在 mtask 的源代码中，相同上层服务，还是比较高效的。

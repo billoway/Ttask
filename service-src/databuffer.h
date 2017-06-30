@@ -6,13 +6,15 @@
 #include <assert.h>
 
 #define MESSAGEPOOL 1023
+// gate 服务中应用层msg的缓冲区实现
 
+// msg node
 struct message {
 	char * buffer;
 	int size;
 	struct message * next;
 };
-
+// 数据缓冲区链表 用来保存应用层的消息数据
 struct databuffer {
 	int header;
 	int offset;
@@ -20,12 +22,12 @@ struct databuffer {
 	struct message * head;
 	struct message * tail;
 };
-
+// msg_pool_list 消息池链表
 struct messagepool_list {
 	struct messagepool_list *next;
 	struct message pool[MESSAGEPOOL];
 };
-
+// 消息池 存放消息池链
 struct messagepool {
 	struct messagepool_list * pool;
 	struct message * freelist;
@@ -34,7 +36,8 @@ struct messagepool {
 // use memset init struct 
 
 static void 
-messagepool_free(struct messagepool *pool) {
+messagepool_free(struct messagepool *pool)
+{
 	struct messagepool_list *p = pool->pool;
 	while(p) {
 		struct messagepool_list *tmp = p;
@@ -46,7 +49,8 @@ messagepool_free(struct messagepool *pool) {
 }
 
 static inline void
-_return_message(struct databuffer *db, struct messagepool *mp) {
+_return_message(struct databuffer *db, struct messagepool *mp)
+{
 	struct message *m = db->head;
 	if (m->next == NULL) {
 		assert(db->tail == m);
@@ -62,7 +66,8 @@ _return_message(struct databuffer *db, struct messagepool *mp) {
 }
 
 static void
-databuffer_read(struct databuffer *db, struct messagepool *mp, void * buffer, int sz) {
+databuffer_read(struct databuffer *db, struct messagepool *mp, void * buffer, int sz)
+{
 	assert(db->size >= sz);
 	db->size -= sz;
 	for (;;) {
@@ -89,7 +94,8 @@ databuffer_read(struct databuffer *db, struct messagepool *mp, void * buffer, in
 }
 
 static void
-databuffer_push(struct databuffer *db, struct messagepool *mp, void *data, int sz) {
+databuffer_push(struct databuffer *db, struct messagepool *mp, void *data, int sz)
+{
 	struct message * m;
 	if (mp->freelist) {
 		m = mp->freelist;
@@ -123,7 +129,8 @@ databuffer_push(struct databuffer *db, struct messagepool *mp, void *data, int s
 }
 
 static int
-databuffer_readheader(struct databuffer *db, struct messagepool *mp, int header_size) {
+databuffer_readheader(struct databuffer *db, struct messagepool *mp, int header_size)
+{
 	if (db->header == 0) {
 		// parser header (2 or 4)
 		if (db->size < header_size) {
@@ -144,12 +151,14 @@ databuffer_readheader(struct databuffer *db, struct messagepool *mp, int header_
 }
 
 static inline void
-databuffer_reset(struct databuffer *db) {
+databuffer_reset(struct databuffer *db)
+{
 	db->header = 0;
 }
 
 static void
-databuffer_clear(struct databuffer *db, struct messagepool *mp) {
+databuffer_clear(struct databuffer *db, struct messagepool *mp)
+{
 	while (db->head) {
 		_return_message(db,mp);
 	}

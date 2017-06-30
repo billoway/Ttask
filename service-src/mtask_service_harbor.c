@@ -21,6 +21,9 @@
 #include <stdint.h>
 #include <unistd.h>
 
+//节点服务,与其他节点互通 harbor.so
+// harbor主要用于mtask集群 不同节点间的通信 是mtask集群的通信模块
+
 #define HASH_SIZE 4096
 #define DEFAULT_QUEUE_SIZE 1024
 
@@ -33,31 +36,32 @@
  */
 struct remote_message_header {
 	uint32_t source;
-	uint32_t destination;
+	uint32_t destination;//高8位保存了消息消息类型和本地消息的harbor id
 	uint32_t session;
 };
-
+// harbor 消息结构
 struct harbor_msg {
 	struct remote_message_header header;
 	void * buffer;
 	size_t size;
 };
-
+//harbor 节点消息队列结构
 struct harbor_msg_queue {
 	int size;
 	int head;
 	int tail;
 	struct harbor_msg * data;
 };
-
+// key-value map 链表 即 node的结构
+// 这里用链地址法解决的 hash冲突问题 所以先找到 bucket再在链表中查找
 struct keyvalue {
 	struct keyvalue * next;
-	char key[GLOBALNAME_LENGTH];
-	uint32_t hash;
-	uint32_t value;
-	struct harbor_msg_queue * queue;
+	char key[GLOBALNAME_LENGTH];// value: name
+	uint32_t hash;              // hash
+	uint32_t value;             // key  : handle
+	struct harbor_msg_queue * queue;//该链表的每个节点都有一个消息队列mq 用于保存这个节点的消息
 };
-
+// map map的每一个节点都有一个消息队列
 struct hashmap {
 	struct keyvalue *node[HASH_SIZE];
 };
@@ -77,13 +81,14 @@ struct slave {
 	uint8_t size[4];
 	char * recv_buffer;
 };
-
+// harbor的结构 harbor保存了本集群所有节点的通信地址 mtask集群内部会简历 n*n个节点
+// 相当于每个节点间都建立了tcp连接
 struct harbor {
-	struct mtask_context *ctx;
-	int id;
-	uint32_t slave;
-	struct hashmap * map;
-	struct slave s[REMOTE_MAX];
+    struct mtask_context *ctx; //harbor节点服务的 mtask_ctx
+    int id;
+    uint32_t slave;
+    struct hashmap * map;   //hashmap存储keyvalue
+    struct slave s[REMOTE_MAX];
 };
 
 // hash table
@@ -698,7 +703,8 @@ mainloop(struct mtask_context * context, void * ud, int type, int session, uint3
 }
 
 int
-harbor_init(struct harbor *h, struct mtask_context *ctx, const char * args) {
+harbor_init(struct harbor *h, struct mtask_context *ctx, const char * args)
+{
 	h->ctx = ctx;
 	int harbor_id = 0;
 	uint32_t slave = 0;
@@ -708,8 +714,8 @@ harbor_init(struct harbor *h, struct mtask_context *ctx, const char * args) {
 	}
 	h->id = harbor_id;
 	h->slave = slave;
-	mtask_callback(ctx, h, mainloop);
-	mtask_harbor_start(ctx);
+	mtask_callback(ctx, h, mainloop);//设置harbor服务的回调函数 同时保存harbor结构
+	mtask_harbor_start(ctx);// 增加引用计数
 
 	return 0;
 }

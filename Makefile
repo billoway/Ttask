@@ -4,8 +4,8 @@ LUA_CLIB_PATH ?= luaclib
 CSERVICE_PATH ?= cservice
 
 MTASK_BUILD_PATH ?= .
-
-CFLAGS = -g -O2 -Wall -I$(LUA_INC) $(MYCFLAGS) 
+# debug 不开-O2
+CFLAGS = -g  -Wall -I$(LUA_INC) $(MYCFLAGS) 
 # CFLAGS += -DUSE_PTHREAD_LOCK
 
 # lua

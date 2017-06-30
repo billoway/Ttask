@@ -186,10 +186,10 @@
 		798213F51F02390C007BE35B /* harbor.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = harbor.lua; sourceTree = "<group>"; };
 		798213F61F02390C007BE35B /* inject.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = inject.lua; sourceTree = "<group>"; };
 		798213F71F02390C007BE35B /* injectcode.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = injectcode.lua; sourceTree = "<group>"; };
-		798213F81F02390C007BE35B /* manager.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = manager.lua; sourceTree = "<group>"; };
+		798213F81F02390C007BE35B /* manager.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = manager.lua; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.lua; };
 		798213F91F02390C007BE35B /* queue.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = queue.lua; sourceTree = "<group>"; };
 		798213FA1F02390C007BE35B /* remotedebug.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = remotedebug.lua; sourceTree = "<group>"; };
-		798213FB1F02390C007BE35B /* mtask.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mtask.lua; sourceTree = "<group>"; };
+		798213FB1F02390C007BE35B /* mtask.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mtask.lua; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.lua; };
 		798213FC1F02390C007BE35B /* multicast.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = multicast.lua; sourceTree = "<group>"; };
 		798213FD1F02390C007BE35B /* mysql.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = mysql.lua; sourceTree = "<group>"; };
 		798213FE1F02390C007BE35B /* redis.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = redis.lua; sourceTree = "<group>"; };
@@ -207,7 +207,7 @@
 		7982140C1F02390C007BE35B /* sproto.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sproto.lua; sourceTree = "<group>"; };
 		7982140D1F02390C007BE35B /* sprotoloader.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sprotoloader.lua; sourceTree = "<group>"; };
 		7982140E1F02390C007BE35B /* sprotoparser.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sprotoparser.lua; sourceTree = "<group>"; };
-		798214101F02391D007BE35B /* bootstrap.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bootstrap.lua; sourceTree = "<group>"; };
+		798214101F02391D007BE35B /* bootstrap.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bootstrap.lua; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.lua; };
 		798214111F02391D007BE35B /* cdummy.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cdummy.lua; sourceTree = "<group>"; };
 		798214121F02391D007BE35B /* clusterd.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = clusterd.lua; sourceTree = "<group>"; };
 		798214131F02391D007BE35B /* clusterproxy.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = clusterproxy.lua; sourceTree = "<group>"; };

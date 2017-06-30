@@ -1,3 +1,5 @@
+#define LUA_LIB
+
 #include "mtask_malloc.h"
 
 #include <lua.h>
@@ -79,7 +81,8 @@ _again:
 }
 
 static void
-wb_init(struct write_block *wb , struct block *b) {
+wb_init(struct write_block *wb , struct block *b)
+{
 	wb->head = b;
 	assert(b->next == NULL);
 	wb->len = 0;
@@ -88,7 +91,8 @@ wb_init(struct write_block *wb , struct block *b) {
 }
 
 static void
-wb_free(struct write_block *wb) {
+wb_free(struct write_block *wb)
+{
 	struct block *blk = wb->head;
 	blk = blk->next;	// the first block is on stack
 	while (blk) {
@@ -168,21 +172,24 @@ wb_integer(struct write_block *wb, lua_Integer v) {
 }
 
 static inline void
-wb_real(struct write_block *wb, double v) {
+wb_real(struct write_block *wb, double v)
+{
 	uint8_t n = COMBINE_TYPE(TYPE_NUMBER , TYPE_NUMBER_REAL);
 	wb_push(wb, &n, 1);
 	wb_push(wb, &v, sizeof(v));
 }
 
 static inline void
-wb_pointer(struct write_block *wb, void *v) {
+wb_pointer(struct write_block *wb, void *v)
+{
 	uint8_t n = TYPE_USERDATA;
 	wb_push(wb, &n, 1);
 	wb_push(wb, &v, sizeof(v));
 }
 
 static inline void
-wb_string(struct write_block *wb, const char *str, int len) {
+wb_string(struct write_block *wb, const char *str, int len)
+{
 	if (len < MAX_COOKIE) {
 		uint8_t n = COMBINE_TYPE(TYPE_SHORT_STRING, len);
 		wb_push(wb, &n, 1);
@@ -209,8 +216,9 @@ wb_string(struct write_block *wb, const char *str, int len) {
 static void pack_one(lua_State *L, struct write_block *b, int index, int depth);
 
 static int
-wb_table_array(lua_State *L, struct write_block * wb, int index, int depth) {
-	int array_size = lua_rawlen(L,index);
+wb_table_array(lua_State *L, struct write_block * wb, int index, int depth)
+{
+	int array_size = (int)lua_rawlen(L,index);
 	if (array_size >= MAX_COOKIE-1) {
 		uint8_t n = COMBINE_TYPE(TYPE_TABLE, MAX_COOKIE-1);
 		wb_push(wb, &n, 1);
@@ -231,7 +239,8 @@ wb_table_array(lua_State *L, struct write_block * wb, int index, int depth) {
 }
 
 static void
-wb_table_hash(lua_State *L, struct write_block * wb, int index, int depth, int array_size) {
+wb_table_hash(lua_State *L, struct write_block * wb, int index, int depth, int array_size)
+{
 	lua_pushnil(L);
 	while (lua_next(L, index) != 0) {
 		if (lua_type(L,-2) == LUA_TNUMBER) {
@@ -251,7 +260,8 @@ wb_table_hash(lua_State *L, struct write_block * wb, int index, int depth, int a
 }
 
 static void
-wb_table_metapairs(lua_State *L, struct write_block *wb, int index, int depth) {
+wb_table_metapairs(lua_State *L, struct write_block *wb, int index, int depth)
+{
 	uint8_t n = COMBINE_TYPE(TYPE_TABLE, 0);
 	wb_push(wb, &n, 1);
 	lua_pushvalue(L, index);
@@ -274,7 +284,8 @@ wb_table_metapairs(lua_State *L, struct write_block *wb, int index, int depth) {
 }
 
 static void
-wb_table(lua_State *L, struct write_block *wb, int index, int depth) {
+wb_table(lua_State *L, struct write_block *wb, int index, int depth)
+{
 	luaL_checkstack(L, LUA_MINSTACK, NULL);
 	if (index < 0) {
 		index = lua_gettop(L) + index + 1;
@@ -288,7 +299,8 @@ wb_table(lua_State *L, struct write_block *wb, int index, int depth) {
 }
 
 static void
-pack_one(lua_State *L, struct write_block *b, int index, int depth) {
+pack_one(lua_State *L, struct write_block *b, int index, int depth)
+{
 	if (depth > MAX_DEPTH) {
 		wb_free(b);
 		luaL_error(L, "serialize can't pack too depth table");
@@ -334,7 +346,8 @@ pack_one(lua_State *L, struct write_block *b, int index, int depth) {
 }
 
 static void
-pack_from(lua_State *L, struct write_block *b, int from) {
+pack_from(lua_State *L, struct write_block *b, int from)
+{
 	int n = lua_gettop(L) - from;
 	int i;
 	for (i=1;i<=n;i++) {
@@ -343,7 +356,8 @@ pack_from(lua_State *L, struct write_block *b, int from) {
 }
 
 static inline void
-invalid_stream_line(lua_State *L, struct read_block *rb, int line) {
+invalid_stream_line(lua_State *L, struct read_block *rb, int line)
+{
 	int len = rb->len;
 	luaL_error(L, "Invalid serialize stream %d (line:%d)", len, line);
 }
@@ -351,7 +365,8 @@ invalid_stream_line(lua_State *L, struct read_block *rb, int line) {
 #define invalid_stream(L,rb) invalid_stream_line(L,rb,__LINE__)
 
 static lua_Integer
-get_integer(lua_State *L, struct read_block *rb, int cookie) {
+get_integer(lua_State *L, struct read_block *rb, int cookie)
+{
 	switch (cookie) {
 	case TYPE_NUMBER_ZERO:
 		return 0;
@@ -394,7 +409,8 @@ get_integer(lua_State *L, struct read_block *rb, int cookie) {
 }
 
 static double
-get_real(lua_State *L, struct read_block *rb) {
+get_real(lua_State *L, struct read_block *rb)
+{
 	double n;
 	double * pn = rb_read(rb,sizeof(n));
 	if (pn == NULL)
@@ -404,7 +420,8 @@ get_real(lua_State *L, struct read_block *rb) {
 }
 
 static void *
-get_pointer(lua_State *L, struct read_block *rb) {
+get_pointer(lua_State *L, struct read_block *rb)
+{
 	void * userdata = 0;
 	void ** v = (void **)rb_read(rb,sizeof(userdata));
 	if (v == NULL) {
@@ -415,7 +432,8 @@ get_pointer(lua_State *L, struct read_block *rb) {
 }
 
 static void
-get_buffer(lua_State *L, struct read_block *rb, int len) {
+get_buffer(lua_State *L, struct read_block *rb, int len)
+{
 	char * p = rb_read(rb,len);
 	if (p == NULL) {
 		invalid_stream(L,rb);
@@ -426,7 +444,8 @@ get_buffer(lua_State *L, struct read_block *rb, int len) {
 static void unpack_one(lua_State *L, struct read_block *rb);
 
 static void
-unpack_table(lua_State *L, struct read_block *rb, int array_size) {
+unpack_table(lua_State *L, struct read_block *rb, int array_size)
+{
 	if (array_size == MAX_COOKIE-1) {
 		uint8_t type;
 		uint8_t *t = rb_read(rb, sizeof(type));
@@ -438,7 +457,7 @@ unpack_table(lua_State *L, struct read_block *rb, int array_size) {
 		if ((type & 7) != TYPE_NUMBER || cookie == TYPE_NUMBER_REAL) {
 			invalid_stream(L,rb);
 		}
-		array_size = get_integer(L,rb,cookie);
+		array_size = (int)get_integer(L,rb,cookie);
 	}
 	luaL_checkstack(L,LUA_MINSTACK,NULL);
 	lua_createtable(L,array_size,0);
@@ -459,7 +478,8 @@ unpack_table(lua_State *L, struct read_block *rb, int array_size) {
 }
 
 static void
-push_value(lua_State *L, struct read_block *rb, int type, int cookie) {
+push_value(lua_State *L, struct read_block *rb, int type, int cookie)
+{
 	switch(type) {
 	case TYPE_NIL:
 		lua_pushnil(L);
@@ -515,7 +535,8 @@ push_value(lua_State *L, struct read_block *rb, int type, int cookie) {
 }
 
 static void
-unpack_one(lua_State *L, struct read_block *rb) {
+unpack_one(lua_State *L, struct read_block *rb)
+{
 	uint8_t type;
 	uint8_t *t = rb_read(rb, sizeof(type));
 	if (t==NULL) {
@@ -526,7 +547,8 @@ unpack_one(lua_State *L, struct read_block *rb) {
 }
 
 static void
-seri(lua_State *L, struct block *b, int len) {
+seri(lua_State *L, struct block *b, int len)
+{
 	uint8_t * buffer = mtask_malloc(len);
 	uint8_t * ptr = buffer;
 	int sz = len;
@@ -547,7 +569,8 @@ seri(lua_State *L, struct block *b, int len) {
 }
 
 int
-_luaseri_unpack(lua_State *L) {
+_luaseri_unpack(lua_State *L)
+{
 	if (lua_isnoneornil(L,1)) {
 		return 0;
 	}
@@ -559,7 +582,7 @@ _luaseri_unpack(lua_State *L) {
 		len = (int)sz;
 	} else {
 		buffer = lua_touserdata(L,1);
-		len = luaL_checkinteger(L,2);
+		len = (int)luaL_checkinteger(L,2);
 	}
 	if (len == 0) {
 		return 0;
@@ -589,9 +612,10 @@ _luaseri_unpack(lua_State *L) {
 
 	return lua_gettop(L);
 }
-
+//lua数据结构的序列化和反序列化  lua数据结构 ==》userdata + size
 int
-_luaseri_pack(lua_State *L) {
+_luaseri_pack(lua_State *L)
+{
 	struct block temp;
 	temp.next = NULL;
 	struct write_block wb;

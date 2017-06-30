@@ -111,9 +111,11 @@ _callback(lua_State *L)
 
 	return 0;
 }
-
+//执行一些mtask命令
+//使用了简单的文本协议 来 cmd 操作 mtask的服务 例如 LAUNCH NAME QUERY REG KILL SETEVN GETEVN
 static int
-_command(lua_State *L) {
+_command(lua_State *L)
+{
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
 	const char * cmd = luaL_checkstring(L,1);
 	const char * result;
@@ -121,7 +123,7 @@ _command(lua_State *L) {
 	if (lua_gettop(L) == 2) {
 		parm = luaL_checkstring(L,2);
 	}
-
+    //使用文本命令调用mtask返回一个字符串结果
 	result = mtask_command(context, cmd, parm);
 	if (result) {
 		lua_pushstring(L, result);
@@ -131,7 +133,8 @@ _command(lua_State *L) {
 }
 
 static int
-_intcommand(lua_State *L) {
+_intcommand(lua_State *L)
+{
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
 	const char * cmd = luaL_checkstring(L,1);
 	const char * result;
@@ -153,15 +156,17 @@ _intcommand(lua_State *L) {
 }
 
 static int
-_genid(lua_State *L) {
+_genid(lua_State *L)
+{
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
-	int session = mtask_send(context, 0, 0, PTYPE_TAG_ALLOCSESSION , 0 , NULL, 0);
+	int session = mtask_send(context, 0, 0, PTYPE_TAG_ALLOCSESSION , 0 , NULL, 0);//生成一个sesion
 	lua_pushinteger(L, session);
 	return 1;
 }
 
 static const char *
-get_dest_string(lua_State *L, int index) {
+get_dest_string(lua_State *L, int index)
+{
 	const char * dest_string = lua_tostring(L, index);
 	if (dest_string == NULL) {
 		luaL_error(L, "dest address type (%s) must be a string or number.", lua_typename(L, lua_type(L,index)));
@@ -186,7 +191,7 @@ _send(lua_State *L)
     //如果值是一个轻量用户数据,那么就返回它表示的指针.
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
     //获取目的地址 string 或者 number
-    uint32_t dest = (uint32_t)lua_tointeger(L, 1);
+    uint32_t dest = (uint32_t)lua_tointeger(L, 1); //目的地址
 	const char * dest_string = NULL;
 	if (dest == 0) {
 		if (lua_type(L,1) == LUA_TNUMBER) {
@@ -240,18 +245,19 @@ _send(lua_State *L)
 	lua_pushinteger(L,session);//seeeion号入栈 也就是返回session
 	return 1;//返回值的个数（入栈个数）
 }
-
+//和_send 功能类似 但是可以指定一个发送发送地址和消息发送的session
 static int
-_redirect(lua_State *L) {
+_redirect(lua_State *L)
+{
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
-	uint32_t dest = (uint32_t)lua_tointeger(L,1);
+	uint32_t dest = (uint32_t)lua_tointeger(L,1);//目的地址
 	const char * dest_string = NULL;
 	if (dest == 0) {
 		dest_string = get_dest_string(L, 1);
 	}
-	uint32_t source = (uint32_t)luaL_checkinteger(L,2);
-	int type = (int)luaL_checkinteger(L,3);
-	int session = (int)luaL_checkinteger(L,4);
+	uint32_t source = (uint32_t)luaL_checkinteger(L,2);//原地址
+	int type = (int)luaL_checkinteger(L,3);//类型
+	int session = (int)luaL_checkinteger(L,4);//session
 
 	int mtype = lua_type(L,5);
 	switch (mtype) {
@@ -270,7 +276,7 @@ _redirect(lua_State *L) {
 	}
 	case LUA_TLIGHTUSERDATA: {
 		void * msg = lua_touserdata(L,5);
-		int size = (int)luaL_checkinteger(L,6);
+		int size = (int)luaL_checkinteger(L,6); //会多一个 size 参数
 		if (dest_string) {
 			session = mtask_sendname(context, source, dest_string, type | PTYPE_TAG_DONTCOPY, session, msg, size);
 		} else {
@@ -301,9 +307,10 @@ _tostring(lua_State *L) {
 	lua_pushlstring(L,msg,sz);
 	return 1;
 }
-
+//C API 用于获得服务所属的节点
 static int
-_harbor(lua_State *L) {
+_harbor(lua_State *L)
+{
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
 	uint32_t handle = (uint32_t)luaL_checkinteger(L,1);
 	int harbor = 0;
