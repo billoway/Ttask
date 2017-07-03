@@ -1,11 +1,3 @@
-//
-//  sproto.h
-//  mtask
-//
-//  Created by TTc on 14/8/11.
-//  Copyright (c) 2015年 TTc. All rights reserved.
-//
-
 #ifndef __mtask__sproto__
 #define __mtask__sproto__
 

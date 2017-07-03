@@ -328,7 +328,8 @@ forward_local_messsage(struct harbor *h, void *msg, int sz) {
 }
 
 static void
-send_remote(struct mtask_context * ctx, int fd, const char * buffer, size_t sz, struct remote_message_header * cookie) {
+send_remote(struct mtask_context * ctx, int fd, const char * buffer, size_t sz, struct remote_message_header * cookie)
+{
 	size_t sz_header = sz+sizeof(*cookie);
 	if (sz_header > UINT32_MAX) {
 		mtask_error(ctx, "remote message from :%08x to :%08x is too large.", cookie->source, cookie->destination);
@@ -340,7 +341,7 @@ send_remote(struct mtask_context * ctx, int fd, const char * buffer, size_t sz, 
 	header_to_message(cookie, sendbuf+4+sz);
 
 	// ignore send error, because if the connection is broken, the mainloop will recv a message.
-	mtask_socket_send(ctx, fd, sendbuf, sz_header+4);
+	mtask_socket_send(ctx, fd, sendbuf, (int)sz_header+4);
 }
 
 static void

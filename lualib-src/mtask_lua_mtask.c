@@ -289,11 +289,30 @@ _redirect(lua_State *L)
 	}
 	return 0;
 }
-
+//错误信息输出到logger
 static int
-_error(lua_State *L) {
+_error(lua_State *L)
+{
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
-	mtask_error(context, "%s", luaL_checkstring(L,1));
+    int n  = lua_gettop(L); //返回栈顶索引 从1开始
+    if (n <= 1) {
+        lua_settop(L, 1);//它将把堆栈的栈顶设为这个索引. 设置栈顶索引为1 相当于清除栈顶为1之后的栈上的数据
+        const char *s = luaL_tolstring(L, 1, NULL);
+        mtask_error(context, "%s", s);
+        return 0;
+    }
+    luaL_Buffer b; //字符串缓存类型
+    luaL_buffinit(L, &b);//初始化字符串和缓存
+    int i;
+    for (i=1; i<=n; i++) {
+        luaL_tolstring(L, i, NULL);
+        luaL_addvalue(&b);//向b添加字符串
+        if (i<n) {
+            luaL_addchar(&b, ' ');
+        }
+    }
+    luaL_pushresult(&b);//将字符串缓存入栈
+	mtask_error(context, "%s", luaL_checkstring(L,1));//错误信息发送到logger
 	return 0;
 }
 

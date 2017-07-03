@@ -1,5 +1,3 @@
-
-
 #include <string.h>
 
 #include "msvcint.h"
@@ -199,7 +197,7 @@ encode(const struct sproto_arg *args) {
                 return -1;
             memcpy(args->value, str, sz);
             lua_pop(L,1);
-            return sz + 1;	// The length of empty string is 1.
+            return (int)(sz + 1);	// The length of empty string is 1.
         }
         case SPROTO_TSTRUCT: {
             struct encode_ud sub;
@@ -253,7 +251,7 @@ static int
 lencode(lua_State *L) {
     struct encode_ud self;
     void * buffer = lua_touserdata(L, lua_upvalueindex(1));
-    int sz = lua_tointeger(L, lua_upvalueindex(2));
+    int sz = (int)(lua_tointeger(L, lua_upvalueindex(2)));
     int tbl_index = 2;
     struct sproto_type * st = lua_touserdata(L, 1);
     if (st == NULL) {
@@ -323,7 +321,7 @@ decode(const struct sproto_arg *args) {
             break;
         }
         case SPROTO_TBOOLEAN: {
-            int v = *(uint64_t*)args->value;
+            int v = (int)(*(uint64_t*)args->value);
             lua_pushboolean(L,v);
             break;
         }
@@ -464,11 +462,11 @@ lpack(lua_State *L) {
     size_t maxsz = (sz + 2047) / 2048 * 2 + sz;
     void * output = lua_touserdata(L, lua_upvalueindex(1));
     int bytes;
-    int osz = lua_tointeger(L, lua_upvalueindex(2));
+    int osz = (int)lua_tointeger(L, lua_upvalueindex(2));
     if (osz < maxsz) {
-        output = expand_buffer(L, osz, maxsz);
+        output = expand_buffer(L, osz, (int)maxsz);
     }
-    bytes = sproto_pack(buffer, sz, output, maxsz);
+    bytes = sproto_pack(buffer, (int)sz, output, (int)maxsz);
     if (bytes > maxsz) {
         return luaL_error(L, "packing error, return size = %d", bytes);
     }
@@ -482,13 +480,13 @@ lunpack(lua_State *L) {
     size_t sz=0;
     const void * buffer = getbuffer(L, 1, &sz);
     void * output = lua_touserdata(L, lua_upvalueindex(1));
-    int osz = lua_tointeger(L, lua_upvalueindex(2));
-    int r = sproto_unpack(buffer, sz, output, osz);
+    int osz = (int)lua_tointeger(L, lua_upvalueindex(2));
+    int r = sproto_unpack(buffer, (int)sz, output, osz);
     if (r < 0)
         return luaL_error(L, "Invalid unpack stream");
     if (r > osz) {
         output = expand_buffer(L, osz, r);
-        r = sproto_unpack(buffer, sz, output, r);
+        r = sproto_unpack(buffer, (int)sz, output, r);
         if (r < 0)
             return luaL_error(L, "Invalid unpack stream");
     }
@@ -517,7 +515,7 @@ lprotocol(lua_State *L) {
     t = lua_type(L,2);
     if (t == LUA_TNUMBER) {
         const char * name;
-        tag = lua_tointeger(L, 2);
+        tag = (int)lua_tointeger(L, 2);
         name = sproto_protoname(sp, tag);
         if (name == NULL)
             return 0;
@@ -552,7 +550,7 @@ static struct sproto * G_sproto[MAX_GLOBALSPROTO];
 static int
 lsaveproto(lua_State *L) {
     struct sproto * sp = lua_touserdata(L, 1);
-    int index = luaL_optinteger(L, 2, 0);
+    int index = (int)luaL_optinteger(L, 2, 0);
     if (index < 0 || index >= MAX_GLOBALSPROTO) {
         return luaL_error(L, "Invalid global slot index %d", index);
     }
@@ -563,7 +561,7 @@ lsaveproto(lua_State *L) {
 
 static int
 lloadproto(lua_State *L) {
-    int index = luaL_optinteger(L, 1, 0);
+    int index = (int)luaL_optinteger(L, 1, 0);
     struct sproto * sp;
     if (index < 0 || index >= MAX_GLOBALSPROTO) {
         return luaL_error(L, "Invalid global slot index %d", index);

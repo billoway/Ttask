@@ -532,7 +532,7 @@ send_list_udp(struct socket_server *ss, struct socket *s, struct wb_list *list, 
 		struct write_buffer * tmp = list->head;
 		union sockaddr_all sa;
 		socklen_t sasz = udp_socket_address(s, tmp->udp_address, &sa);
-		int err = sendto(s->fd, tmp->ptr, tmp->sz, 0, &sa.s, sasz);
+		int err = (int)sendto(s->fd, tmp->ptr, tmp->sz, 0, &sa.s, sasz);
 		if (err < 0) {
 			switch(errno) {
 			case EINTR:
@@ -706,7 +706,7 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 	}
 	if (send_buffer_empty(s) && s->type == SOCKET_TYPE_CONNECTED) {
 		if (s->protocol == PROTOCOL_TCP) {
-			int n = write(s->fd, so.buffer, so.sz);
+			int n = (int)write(s->fd, so.buffer, so.sz);
 			if (n<0) {
 				switch(errno) {
 				case EINTR:
@@ -732,7 +732,7 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 			}
 			union sockaddr_all sa;
 			socklen_t sasz = udp_socket_address(s, udp_address, &sa);
-			int n = sendto(s->fd, so.buffer, so.sz, 0, &sa.s, sasz);
+			int n = (int)sendto(s->fd, so.buffer, so.sz, 0, &sa.s, sasz);
 			if (n != so.sz) {
 				append_sendbuffer_udp(ss,s,priority,request,udp_address);
 			} else {
@@ -865,7 +865,7 @@ setopt_socket(struct socket_server *ss, struct request_setopt *request) {
 static void
 block_readpipe(int pipefd, void *buffer, int sz) {
 	for (;;) {
-		int n = read(pipefd, buffer, sz);
+		int n = (int)read(pipefd, buffer, sz);
 		if (n<0) {
 			if (errno == EINTR)
 				continue;
@@ -1057,7 +1057,7 @@ static int
 forward_message_udp(struct socket_server *ss, struct socket *s, struct socket_message * result) {
 	union sockaddr_all sa;
 	socklen_t slen = sizeof(sa);
-	int n = recvfrom(s->fd, ss->udpbuffer,MAX_UDP_PACKAGE,0,&sa.s,&slen);
+	int n = (int)recvfrom(s->fd, ss->udpbuffer,MAX_UDP_PACKAGE,0,&sa.s,&slen);
 	if (n<0) {
 		switch(errno) {
 		case EINTR:
@@ -1258,11 +1258,12 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
 }
 
 static void
-send_request(struct socket_server *ss, struct request_package *request, char type, int len) {
+send_request(struct socket_server *ss, struct request_package *request, char type, int len)
+{
 	request->header[6] = (uint8_t)type;
 	request->header[7] = (uint8_t)len;
 	for (;;) {
-		int n = write(ss->sendctrl_fd, &request->header[6], len+2);
+		int n = (int)write(ss->sendctrl_fd, &request->header[6], len+2);
 		if (n<0) {
 			if (errno != EINTR) {
 				fprintf(stderr, "socket-server : send ctrl command error %s.\n", strerror(errno));
@@ -1275,8 +1276,9 @@ send_request(struct socket_server *ss, struct request_package *request, char typ
 }
 
 static int
-open_request(struct socket_server *ss, struct request_package *req, uintptr_t opaque, const char *addr, int port) {
-	int len = strlen(addr);
+open_request(struct socket_server *ss, struct request_package *req, uintptr_t opaque, const char *addr, int port)
+{
+	int len = (int)strlen(addr);
 	if (len + sizeof(req->u.open) >= 256) {
 		fprintf(stderr, "socket-server : Invalid addr %s.\n",addr);
 		return -1;

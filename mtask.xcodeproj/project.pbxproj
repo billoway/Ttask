@@ -46,7 +46,6 @@
 		792E9E291B7DF3330078FDC9 /* lutf8lib.c in Sources */ = {isa = PBXBuildFile; fileRef = 792E9E011B7DF3330078FDC9 /* lutf8lib.c */; };
 		792E9E2A1B7DF3330078FDC9 /* lvm.c in Sources */ = {isa = PBXBuildFile; fileRef = 792E9E021B7DF3330078FDC9 /* lvm.c */; };
 		792E9E2B1B7DF3330078FDC9 /* lzio.c in Sources */ = {isa = PBXBuildFile; fileRef = 792E9E041B7DF3330078FDC9 /* lzio.c */; };
-		792E9E2C1B7DF3330078FDC9 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 792E9E061B7DF3330078FDC9 /* Makefile */; };
 		798B5D801B79B4860054E773 /* mtask_lua_clientsocket.c in Sources */ = {isa = PBXBuildFile; fileRef = 798B5D761B79B4860054E773 /* mtask_lua_clientsocket.c */; };
 		798B5D811B79B4860054E773 /* mtask_lua_debugchannel.c in Sources */ = {isa = PBXBuildFile; fileRef = 798B5D771B79B4860054E773 /* mtask_lua_debugchannel.c */; };
 		798B5D821B79B4860054E773 /* mtask_lua_memory.c in Sources */ = {isa = PBXBuildFile; fileRef = 798B5D781B79B4860054E773 /* mtask_lua_memory.c */; };
@@ -168,8 +167,6 @@
 		792E9E031B7DF3330078FDC9 /* lvm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lvm.h; sourceTree = "<group>"; };
 		792E9E041B7DF3330078FDC9 /* lzio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = lzio.c; sourceTree = "<group>"; };
 		792E9E051B7DF3330078FDC9 /* lzio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = lzio.h; sourceTree = "<group>"; };
-		792E9E061B7DF3330078FDC9 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		792E9E071B7DF3330078FDC9 /* README */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README; sourceTree = "<group>"; };
 		798213E61F02390B007BE35B /* cluster.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cluster.lua; sourceTree = "<group>"; };
 		798213E71F02390B007BE35B /* datacenter.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = datacenter.lua; sourceTree = "<group>"; };
 		798213E81F02390B007BE35B /* dns.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = dns.lua; sourceTree = "<group>"; };
@@ -204,9 +201,9 @@
 		798214091F02390C007BE35B /* snax.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = snax.lua; sourceTree = "<group>"; };
 		7982140A1F02390C007BE35B /* socket.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = socket.lua; sourceTree = "<group>"; };
 		7982140B1F02390C007BE35B /* socketchannel.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = socketchannel.lua; sourceTree = "<group>"; };
-		7982140C1F02390C007BE35B /* sproto.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sproto.lua; sourceTree = "<group>"; };
-		7982140D1F02390C007BE35B /* sprotoloader.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sprotoloader.lua; sourceTree = "<group>"; };
-		7982140E1F02390C007BE35B /* sprotoparser.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sprotoparser.lua; sourceTree = "<group>"; };
+		7982140C1F02390C007BE35B /* sproto.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sproto.lua; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.lua; };
+		7982140D1F02390C007BE35B /* sprotoloader.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sprotoloader.lua; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.lua; };
+		7982140E1F02390C007BE35B /* sprotoparser.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sprotoparser.lua; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.lua; };
 		798214101F02391D007BE35B /* bootstrap.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = bootstrap.lua; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.lua; };
 		798214111F02391D007BE35B /* cdummy.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = cdummy.lua; sourceTree = "<group>"; };
 		798214121F02391D007BE35B /* clusterd.lua */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = clusterd.lua; sourceTree = "<group>"; };
@@ -428,8 +425,6 @@
 				792E9E031B7DF3330078FDC9 /* lvm.h */,
 				792E9E041B7DF3330078FDC9 /* lzio.c */,
 				792E9E051B7DF3330078FDC9 /* lzio.h */,
-				792E9E061B7DF3330078FDC9 /* Makefile */,
-				792E9E071B7DF3330078FDC9 /* README */,
 			);
 			path = lua;
 			sourceTree = "<group>";
@@ -791,7 +786,7 @@
 		79CED69F1B6B140D00378C7E /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0640;
+				LastUpgradeCheck = 0830;
 				ORGANIZATIONNAME = TTc;
 				TargetAttributes = {
 					79CED6A61B6B140D00378C7E = {
@@ -869,7 +864,6 @@
 				792E9E1D1B7DF3330078FDC9 /* lopcodes.c in Sources */,
 				792E9E191B7DF3330078FDC9 /* lmathlib.c in Sources */,
 				792E9E1B1B7DF3330078FDC9 /* loadlib.c in Sources */,
-				792E9E2C1B7DF3330078FDC9 /* Makefile in Sources */,
 				79DCE8DB1B78F31D002427E5 /* mtask_timer.c in Sources */,
 				792E9E1A1B7DF3330078FDC9 /* lmem.c in Sources */,
 				798B5D841B79B4860054E773 /* mtask_lua_netpack.c in Sources */,
@@ -918,13 +912,16 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -960,8 +957,10 @@
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;

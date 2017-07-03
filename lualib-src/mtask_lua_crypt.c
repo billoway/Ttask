@@ -372,7 +372,7 @@ ldesencode(lua_State *L) {
 	for (i=0;i<(int)textsz-7;i+=8) {
 		des_crypt(SK, text+i, buffer+i);
 	}
-	int bytes = textsz - i;
+	int bytes = (int)(textsz - i);
 	uint8_t tail[8];
 	int j;
 	for (j=0;j<8;j++) {
@@ -414,7 +414,7 @@ ldesdecode(lua_State *L) {
 		des_crypt(SK, text+i, buffer+i);
 	}
 	int padding = 1;
-	for (i=textsz-1;i>=textsz-8;i--) {
+	for (i=(int)textsz-1;i>=textsz-8;i--) {
 		if (buffer[i] == 0) {
 			padding++;
 		} else if (buffer[i] == 0x80) {
@@ -751,7 +751,7 @@ lb64encode(lua_State *L) {
 	static const char* encoding = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 	size_t sz = 0;
 	const uint8_t * text = (const uint8_t *)luaL_checklstring(L, 1, &sz);
-	int encode_sz = (sz + 2)/3*4;
+	int encode_sz = (int)(sz + 2)/3*4;
 	char tmp[SMALL_CHUNK];
 	char *buffer = tmp;
 	if (encode_sz > SMALL_CHUNK) {
@@ -767,7 +767,7 @@ lb64encode(lua_State *L) {
 		buffer[j+3] = encoding[(v) & 0x3f];
 		j+=4;
 	}
-	int padding = sz-i;
+	int padding = (int)sz-i;
 	uint32_t v;
 	switch(padding) {
 	case 1 :
@@ -806,7 +806,7 @@ static int
 lb64decode(lua_State *L) {
 	size_t sz = 0;
 	const uint8_t * text = (const uint8_t *)luaL_checklstring(L, 1, &sz);
-	int decode_sz = (sz+3)/4*3;
+	int decode_sz = (int)(sz+3)/4*3;
 	char tmp[SMALL_CHUNK];
 	char *buffer = tmp;
 	if (decode_sz > SMALL_CHUNK) {
@@ -873,7 +873,7 @@ int lhmac_sha1(lua_State *L);
 int
 luaopen_crypt(lua_State *L) {
 	luaL_checkversion(L);
-	srandom(time(NULL));
+	srandom((unsigned int)time(NULL));
 	luaL_Reg l[] = {
 		{ "hashkey", lhashkey },
 		{ "randomkey", lrandomkey },

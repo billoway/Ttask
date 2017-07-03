@@ -281,7 +281,7 @@ end
 function mtask.yield()
 	return mtask.sleep(0)
 end
-
+-- 把当前 coroutine 挂起。通常这个函数需要结合 mtask.wakeup 使用
 function mtask.wait()
 	local session = c.genid()
 	local ret, msg = coroutine_yield("SLEEP", session)
@@ -349,7 +349,7 @@ function mtask.exit()
 	-- quit service
 	coroutine_yield "QUIT"
 end
-
+--获取mtask 环境变量
 function mtask.getenv(key)
 	local ret = c.command("GETENV",key)
 	if ret == "" then
@@ -358,7 +358,7 @@ function mtask.getenv(key)
 		return ret
 	end
 end
-
+--设置mtask 环境变量
 function mtask.setenv(key, value)
 	c.command("SETENV",key .. " " ..value)
 end
@@ -441,7 +441,8 @@ end
 function mtask.retpack(...)
 	return mtask.ret(mtask.pack(...))
 end
-
+-- 唤醒一个被 mtask.sleep 或 mtask.wait 挂起的 coroutine 。
+--目前的版本则可以保证次序
 function mtask.wakeup(co)
 	if sleep_session[co] and wakeup_session[co] == nil then
 		wakeup_session[co] = true
@@ -487,7 +488,7 @@ function mtask.dispatch_unknown_response(unknown)
 end
 
 local tunpack = table.unpack
-
+--从功能上，它等价于 mtask.timeout(0, function() func(...) end) 但是比 timeout 高效一点。因为它并不需要向框架注册一个定时器
 function mtask.fork(func,...)
 	local args = { ... }
 	local co = co_create(function()

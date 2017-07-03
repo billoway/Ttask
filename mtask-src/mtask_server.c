@@ -545,13 +545,13 @@ cmd_launch(struct mtask_context * context, const char * param)
 		return context->result;
 	}
 }
-
+//获取mtask 环境变量
 static const char *
 cmd_getenv(struct mtask_context * context, const char * param)
 {
 	return mtask_getenv(param);
 }
-
+//设置mtask 环境变量
 static const char *
 cmd_setenv(struct mtask_context * context, const char * param)
 {
