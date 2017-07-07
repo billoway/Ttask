@@ -1,5 +1,4 @@
 local mtask = require "mtask"
-local netpack = require "netpack"
 
 local CMD = {}
 local SOCKET = {}

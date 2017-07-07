@@ -538,7 +538,45 @@ const uint32_t r[] = {7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22
  
 // leftrotate function definition
 #define LEFTROTATE(x, c) (((x) << (c)) | ((x) >> (32 - (c))))
- 
+
+static void
+digest_md5(uint32_t w[16], uint32_t result[4]) {
+    uint32_t a, b, c, d, f, g, temp;
+    int i;
+    
+    a = 0x67452301u;
+    b = 0xefcdab89u;
+    c = 0x98badcfeu;
+    d = 0x10325476u;
+    
+    for(i = 0; i<64; i++) {
+        if (i < 16) {
+            f = (b & c) | ((~b) & d);
+            g = i;
+        } else if (i < 32) {
+            f = (d & b) | ((~d) & c);
+            g = (5*i + 1) % 16;
+        } else if (i < 48) {
+            f = b ^ c ^ d;
+            g = (3*i + 5) % 16;
+        } else {
+            f = c ^ (b | (~d));
+            g = (7*i) % 16;
+        }
+        
+        temp = d;
+        d = c;
+        c = b;
+        b = b + LEFTROTATE((a + f + k[i] + w[g]), r[i]);
+        a = temp;
+    }
+    
+    result[0] = a;
+    result[1] = b;
+    result[2] = c;
+    result[3] = d;
+}
+
 static void
 hmac(uint32_t x[2], uint32_t y[2], uint32_t result[2]) {
 	uint32_t w[16];
@@ -585,6 +623,29 @@ hmac(uint32_t x[2], uint32_t y[2], uint32_t result[2]) {
 }
 
 static void
+hmac_md5(uint32_t x[2], uint32_t y[2], uint32_t result[2]) {
+    uint32_t w[16];
+    uint32_t r[4];
+    int i;
+    for (i=0;i<12;i+=4) {
+        w[i] = x[0];
+        w[i+1] = x[1];
+        w[i+2] = y[0];
+        w[i+3] = y[1];
+    }
+    
+    w[12] = 0x80;
+    w[13] = 0;
+    w[14] = 384;
+    w[15] = 0;
+    
+    digest_md5(w,r);
+    
+    result[0] = (r[0] + 0x67452301u) ^ (r[2] + 0x98badcfeu);
+    result[1] = (r[1] + 0xefcdab89u) ^ (r[3] + 0x10325476u);
+}
+
+static void
 read64(lua_State *L, uint32_t xx[2], uint32_t yy[2]) {
 	size_t sz = 0;
 	const uint8_t *x = (const uint8_t *)luaL_checklstring(L, 1, &sz);
@@ -626,6 +687,20 @@ lhmac64(lua_State *L) {
 	return pushqword(L, result);
 }
 
+/*
+ h1 = crypt.hmac64_md5(a,b)
+ m = md5.sum((a..b):rep(3))
+ h2 = crypt.xor_str(m:sub(1,8), m:sub(9,16))
+ assert(h1 == h2)
+ */
+static int
+lhmac64_md5(lua_State *L) {
+    uint32_t x[2], y[2];
+    read64(L, x, y);
+    uint32_t result[2];
+    hmac_md5(x,y,result);
+    return pushqword(L, result);
+}
 /*
 	8bytes key
 	string text
@@ -866,31 +941,63 @@ lb64decode(lua_State *L) {
 	return 1;
 }
 
+static int
+lxor_str(lua_State *L) {
+    size_t len1,len2;
+    const char *s1 = luaL_checklstring(L,1,&len1);
+    const char *s2 = luaL_checklstring(L,2,&len2);
+    if (len2 == 0) {
+        return luaL_error(L, "Can't xor empty string");
+    }
+    luaL_Buffer b;
+    char * buffer = luaL_buffinitsize(L, &b, len1);
+    int i;
+    for (i=0;i<len1;i++) {
+        buffer[i] = s1[i] ^ s2[i % len2];
+    }
+    luaL_addsize(&b, len1);
+    luaL_pushresult(&b);
+    return 1;
+}
+
 // defined in lsha1.c
 int lsha1(lua_State *L);
 int lhmac_sha1(lua_State *L);
 
-int
-luaopen_crypt(lua_State *L) {
-	luaL_checkversion(L);
-	srandom((unsigned int)time(NULL));
-	luaL_Reg l[] = {
-		{ "hashkey", lhashkey },
-		{ "randomkey", lrandomkey },
-		{ "desencode", ldesencode },
-		{ "desdecode", ldesdecode },
-		{ "hexencode", ltohex },
-		{ "hexdecode", lfromhex },
-		{ "hmac64", lhmac64 },
-		{ "dhexchange", ldhexchange },
-		{ "dhsecret", ldhsecret },
-		{ "base64encode", lb64encode },
-		{ "base64decode", lb64decode },
-		{ "sha1", lsha1 },
-		{ "hmac_sha1", lhmac_sha1 },
-		{ "hmac_hash", lhmac_hash },
-		{ NULL, NULL },
-	};
-	luaL_newlib(L,l);
-	return 1;
+LUAMOD_API int
+luaopen_mtask_crypt(lua_State *L)
+{
+    luaL_checkversion(L);
+    static int init = 0;
+    if (!init) {
+        // Don't need call srandom more than once.
+        init = 1 ;
+        srandom((unsigned)time(NULL));
+    }
+    luaL_Reg l[] = {
+        { "hashkey", lhashkey },
+        { "randomkey", lrandomkey },
+        { "desencode", ldesencode },
+        { "desdecode", ldesdecode },
+        { "hexencode", ltohex },
+        { "hexdecode", lfromhex },
+        { "hmac64", lhmac64 },
+        { "hmac64_md5", lhmac64_md5 },
+        { "dhexchange", ldhexchange },
+        { "dhsecret", ldhsecret },
+        { "base64encode", lb64encode },
+        { "base64decode", lb64decode },
+        { "sha1", lsha1 },
+        { "hmac_sha1", lhmac_sha1 },
+        { "hmac_hash", lhmac_hash },
+        { "xor_str", lxor_str },
+        { NULL, NULL },
+    };
+    luaL_newlib(L,l);
+    return 1;
+}
+
+LUAMOD_API int
+luaopen_client_crypt(lua_State *L) {
+    return luaopen_mtask_crypt(L);
 }

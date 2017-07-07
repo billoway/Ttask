@@ -1,9 +1,5 @@
-//
-//  lua_mysqlaux.c
-//
-//  Created by changfeng on 6/17/14.
-//  Copyright (c) 2014 changfeng. All rights reserved.
-//
+#define LUA_LIB
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,7 +7,8 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-static unsigned int num_escape_sql_str(unsigned char *dst, unsigned char *src, size_t size)
+static unsigned int
+num_escape_sql_str(unsigned char *dst, unsigned char *src, size_t size)
 {
     unsigned int n =0;
     while (size) {
@@ -43,7 +40,7 @@ static unsigned char*
 escape_sql_str(unsigned char *dst, unsigned char *src, size_t size)
 {
     
-      while (size) {
+    while (size) {
         if ((*src & 0x80) == 0) {
             switch (*src) {
                 case '\0':
@@ -156,13 +153,15 @@ quote_sql_str(lua_State *L)
 }
 
 
-static struct luaL_Reg mysqlauxlib[] = {
+static struct luaL_Reg
+mysqlauxlib[] = {
     {"quote_sql_str",quote_sql_str},
     {NULL, NULL}
 };
 
 
-int luaopen_mysqlaux_c (lua_State *L) {
+LUAMOD_API int
+luaopen_mtask_mysqlaux_c (lua_State *L) {
     lua_newtable(L);
     luaL_setfuncs(L, mysqlauxlib, 0);
     return 1;

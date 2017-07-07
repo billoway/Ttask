@@ -8,6 +8,11 @@ function cluster.call(node, address, ...)
 	return mtask.call(clusterd, "lua", "req", node, address, mtask.pack(...))
 end
 
+function cluster.send(node, address, ...)
+	-- push is the same with req, but no response
+	mtask.send(clusterd, "lua", "push", node, address, mtask.pack(...))
+end
+
 function cluster.open(port)
 	if type(port) == "string" then
 		mtask.call(clusterd, "lua", "listen", port)
@@ -16,8 +21,8 @@ function cluster.open(port)
 	end
 end
 
-function cluster.reload()
-	mtask.call(clusterd, "lua", "reload")
+function cluster.reload(config)
+	mtask.call(clusterd, "lua", "reload", config)
 end
 
 function cluster.proxy(node, name)
@@ -25,7 +30,7 @@ function cluster.proxy(node, name)
 end
 
 function cluster.snax(node, name, address)
-	local snax = require "snax"
+	local snax = require "mtask.snax"
 	if not address then
 		address = cluster.call(node, ".service", "QUERY", "snaxd" , name)
 	end

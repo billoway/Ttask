@@ -1,14 +1,16 @@
-#include "mtask.h"
-#include "mtask_lua_seri.h"
-
-#define KNRM  "\x1B[0m"
-#define KRED  "\x1B[31m"
+#define LUA_LIB
 
 #include <lua.h>
 #include <lauxlib.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+
+#include "mtask.h"
+#include "mtask_lua_seri.h"
+
+#define KNRM  "\x1B[0m"
+#define KRED  "\x1B[31m"
 
 //核心库，封装mtask给lua使用  mtask.so
 
@@ -24,9 +26,8 @@ traceback (lua_State *L)
 	const char *msg = lua_tostring(L, 1);
 	if (msg) //将栈L的栈回溯信息压栈;msg它会附加到栈回溯信息之前,从第一层开始做展开回溯。
 		luaL_traceback(L, L, msg, 1);
-	else {
+	else
 		lua_pushliteral(L, "(no error message)");
-	}
 	return 1;
 }
 
@@ -86,7 +87,7 @@ forward_cb(struct mtask_context * context, void * ud, int type, int session, uin
 }
 //设置mtask_context总的cb和cb_ud 分别为_cb何lua_state 同时记录lua_function到注册表中
 static int
-_callback(lua_State *L)
+lcallback(lua_State *L)
 {
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
 	int forward = lua_toboolean(L, 2);//是否转发
@@ -114,7 +115,7 @@ _callback(lua_State *L)
 //执行一些mtask命令
 //使用了简单的文本协议 来 cmd 操作 mtask的服务 例如 LAUNCH NAME QUERY REG KILL SETEVN GETEVN
 static int
-_command(lua_State *L)
+lcommand(lua_State *L)
 {
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
 	const char * cmd = luaL_checkstring(L,1);
@@ -133,30 +134,45 @@ _command(lua_State *L)
 }
 
 static int
-_intcommand(lua_State *L)
+lintcommand(lua_State *L)
 {
-	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
-	const char * cmd = luaL_checkstring(L,1);
-	const char * result;
-	const char * parm = NULL;
-	char tmp[64];	// for integer parm
-	if (lua_gettop(L) == 2) {
-		int32_t n = (int32_t)luaL_checkinteger(L,2);
-		sprintf(tmp, "%d", n);
-		parm = tmp;
-	}
-
-	result = mtask_command(context, cmd, parm);
-	if (result) {
-		lua_Integer r = strtoll(result, NULL, 0);
-		lua_pushinteger(L, r);
-		return 1;
-	}
-	return 0;
+    struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
+    const char * cmd = luaL_checkstring(L,1);
+    const char * result;
+    const char * parm = NULL;
+    char tmp[64];	// for integer parm
+    if (lua_gettop(L) == 2) {
+        if (lua_isnumber(L, 2)) {
+            int32_t n = (int32_t)luaL_checkinteger(L,2);
+            sprintf(tmp, "%d", n);
+            parm = tmp;
+        } else {
+            parm = luaL_checkstring(L,2);
+        }
+    }
+    
+    result = mtask_command(context, cmd, parm);
+    if (result) {
+        char *endptr = NULL;
+        lua_Integer r = strtoll(result, &endptr, 0);
+        if (endptr == NULL || *endptr != '\0') {
+            // may be real number
+            double n = strtod(result, &endptr);
+            if (endptr == NULL || *endptr != '\0') {
+                return luaL_error(L, "Invalid result %s", result);
+            } else {
+                lua_pushnumber(L, n);
+            }
+        } else {
+            lua_pushinteger(L, r);
+        }
+        return 1;
+    }
+    return 0;
 }
 
 static int
-_genid(lua_State *L)
+lgenid(lua_State *L)
 {
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
 	int session = mtask_send(context, 0, 0, PTYPE_TAG_ALLOCSESSION , 0 , NULL, 0);//生成一个sesion
@@ -174,6 +190,67 @@ get_dest_string(lua_State *L, int index)
 	return dest_string;
 }
 
+static int
+send_message(lua_State *L, int source, int idx_type)
+{
+    //如果给定索引处的值是一个完全用户数据,函数返回其内存块的地址.
+    //如果值是一个轻量用户数据,那么就返回它表示的指针.
+    struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
+    //获取目的地址 string 或者 number
+    uint32_t dest = (uint32_t)lua_tointeger(L, 1); //目的地址
+    const char * dest_string = NULL;
+    if (dest == 0) {
+        if (lua_type(L,1) == LUA_TNUMBER) {
+            return luaL_error(L, "Invalid service address 0");
+        }
+        dest_string = get_dest_string(L, 1);
+    }
+    //消息类型
+    int type = (int)luaL_checkinteger(L, idx_type+0);
+    //session
+    int session = 0;
+    if (lua_isnil(L,idx_type+1)) {
+        type |= PTYPE_TAG_ALLOCSESSION;
+    } else {
+        session = (int)luaL_checkinteger(L,idx_type+1);
+    }
+    //消息数据是字符串或者内存数据 string 和 lightuserdata
+    int mtype = lua_type(L,idx_type+2);
+    switch (mtype) {
+        case LUA_TSTRING: {//字符串数据
+            size_t len = 0;
+            void * msg = (void *)lua_tolstring(L,idx_type+2,&len);
+            if (len == 0) {
+                msg = NULL;
+            }
+            if (dest_string) {
+                session = mtask_sendname(context, 0, dest_string, type, session , msg, len);
+            } else {
+                session = mtask_send(context, 0, dest, type, session , msg, len);
+            }
+            break;
+        }
+        case LUA_TLIGHTUSERDATA: { //内存数据
+            void * msg = lua_touserdata(L,idx_type+2);
+            int size = (int)luaL_checkinteger(L,idx_type+3);
+            if (dest_string) {
+                session = mtask_sendname(context, 0, dest_string, type | PTYPE_TAG_DONTCOPY, session, msg, size);
+            } else {
+                session = mtask_send(context, 0, dest, type | PTYPE_TAG_DONTCOPY, session, msg, size);
+            }
+            break;
+        }
+        default:
+            luaL_error(L, "mtask.send invalid param %s", lua_typename(L, lua_type(L,idx_type+2)));
+    }
+    if (session < 0) {
+        // send to invalid address
+        // todo: maybe throw an error would be better
+        return 0;
+    }
+    lua_pushinteger(L,session);//seeeion号入栈 也就是返回session
+    return 1;//返回值的个数（入栈个数）
+}
 /*
 	uint32 address
 	 string address
@@ -185,113 +262,20 @@ get_dest_string(lua_State *L, int index)
  */
 // mtask_context_send mtask_sendname /mtask_send-》mtask_harbor_send | mtask_context_push
 static int
-_send(lua_State *L)
+lsend(lua_State *L)
 {
-    //如果给定索引处的值是一个完全用户数据,函数返回其内存块的地址.
-    //如果值是一个轻量用户数据,那么就返回它表示的指针.
-	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
-    //获取目的地址 string 或者 number
-    uint32_t dest = (uint32_t)lua_tointeger(L, 1); //目的地址
-	const char * dest_string = NULL;
-	if (dest == 0) {
-		if (lua_type(L,1) == LUA_TNUMBER) {
-			return luaL_error(L, "Invalid service address 0");
-		}
-		dest_string = get_dest_string(L, 1);
-	}
-    //消息类型
-	int type = (int)luaL_checkinteger(L, 2);
-    //session
-	int session = 0;
-	if (lua_isnil(L,3)) {
-		type |= PTYPE_TAG_ALLOCSESSION;
-	} else {
-		session = (int)luaL_checkinteger(L,3);
-	}
-    //消息数据是字符串或者内存数据 string 和 lightuserdata
-	int mtype = lua_type(L,4);
-	switch (mtype) {
-	case LUA_TSTRING: {//字符串数据
-		size_t len = 0;
-		void * msg = (void *)lua_tolstring(L,4,&len);
-		if (len == 0) {
-			msg = NULL;
-		}
-		if (dest_string) {
-			session = mtask_sendname(context, 0, dest_string, type, session , msg, len);
-		} else {
-			session = mtask_send(context, 0, dest, type, session , msg, len);
-		}
-		break;
-	}
-	case LUA_TLIGHTUSERDATA: { //内存数据
-		void * msg = lua_touserdata(L,4);
-		int size = (int)luaL_checkinteger(L,5);
-		if (dest_string) {
-			session = mtask_sendname(context, 0, dest_string, type | PTYPE_TAG_DONTCOPY, session, msg, size);
-		} else {
-			session = mtask_send(context, 0, dest, type | PTYPE_TAG_DONTCOPY, session, msg, size);
-		}
-		break;
-	}
-	default:
-		luaL_error(L, "mtask.send invalid param %s", lua_typename(L, lua_type(L,4)));
-	}
-	if (session < 0) {
-		// send to invalid address
-		// todo: maybe throw an error would be better
-		return 0;
-	}
-	lua_pushinteger(L,session);//seeeion号入栈 也就是返回session
-	return 1;//返回值的个数（入栈个数）
+    return send_message(L, 0, 2);
 }
 //和_send 功能类似 但是可以指定一个发送发送地址和消息发送的session
 static int
-_redirect(lua_State *L)
+lredirect(lua_State *L)
 {
-	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
-	uint32_t dest = (uint32_t)lua_tointeger(L,1);//目的地址
-	const char * dest_string = NULL;
-	if (dest == 0) {
-		dest_string = get_dest_string(L, 1);
-	}
-	uint32_t source = (uint32_t)luaL_checkinteger(L,2);//原地址
-	int type = (int)luaL_checkinteger(L,3);//类型
-	int session = (int)luaL_checkinteger(L,4);//session
-
-	int mtype = lua_type(L,5);
-	switch (mtype) {
-	case LUA_TSTRING: {
-		size_t len = 0;
-		void * msg = (void *)lua_tolstring(L,5,&len);
-		if (len == 0) {
-			msg = NULL;
-		}
-		if (dest_string) {
-			session = mtask_sendname(context, source, dest_string, type, session , msg, len);
-		} else {
-			session = mtask_send(context, source, dest, type, session , msg, len);
-		}
-		break;
-	}
-	case LUA_TLIGHTUSERDATA: {
-		void * msg = lua_touserdata(L,5);
-		int size = (int)luaL_checkinteger(L,6); //会多一个 size 参数
-		if (dest_string) {
-			session = mtask_sendname(context, source, dest_string, type | PTYPE_TAG_DONTCOPY, session, msg, size);
-		} else {
-			session = mtask_send(context, source, dest, type | PTYPE_TAG_DONTCOPY, session, msg, size);
-		}
-		break;
-	}
-	default:
-		luaL_error(L, "mtask.redirect invalid param %s", lua_typename(L,mtype));
-	}
-	return 0;
+    uint32_t source = (uint32_t)luaL_checkinteger(L,2);
+    return send_message(L, source, 3);
 }
 //错误信息输出到logger
 static int
-_error(lua_State *L)
+lerror(lua_State *L)
 {
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
     int n  = lua_gettop(L); //返回栈顶索引 从1开始
@@ -317,7 +301,8 @@ _error(lua_State *L)
 }
 
 static int
-_tostring(lua_State *L) {
+ltostring(lua_State *L)
+{
 	if (lua_isnoneornil(L,1)) {
 		return 0;
 	}
@@ -328,7 +313,7 @@ _tostring(lua_State *L) {
 }
 //C API 用于获得服务所属的节点
 static int
-_harbor(lua_State *L)
+lharbor(lua_State *L)
 {
 	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
 	uint32_t handle = (uint32_t)luaL_checkinteger(L,1);
@@ -341,8 +326,9 @@ _harbor(lua_State *L)
 }
 
 static int
-lpackstring(lua_State *L) {
-	_luaseri_pack(L);
+lpackstring(lua_State *L)
+{
+	luaseri_pack(L);
 	char * str = (char *)lua_touserdata(L, -2);
 	int sz = (int)lua_tointeger(L, -1);
 	lua_pushlstring(L, str, sz);
@@ -351,20 +337,21 @@ lpackstring(lua_State *L) {
 }
 
 static int
-ltrash(lua_State *L) {
+ltrash(lua_State *L)
+{
 	int t = lua_type(L,1);
 	switch (t) {
-	case LUA_TSTRING: {
-		break;
-	}
-	case LUA_TLIGHTUSERDATA: {
-		void * msg = lua_touserdata(L,1);
-		luaL_checkinteger(L,2);
-		mtask_free(msg);
-		break;
-	}
-	default:
-		luaL_error(L, "mtask.trash invalid param %s", lua_typename(L,t));
+        case LUA_TSTRING: {
+            break;
+        }
+        case LUA_TLIGHTUSERDATA: {
+            void * msg = lua_touserdata(L,1);
+            luaL_checkinteger(L,2);
+            mtask_free(msg);
+            break;
+        }
+        default:
+            luaL_error(L, "mtask.trash invalid param %s", lua_typename(L,t));
 	}
 
 	return 0;
@@ -378,25 +365,25 @@ lnow(lua_State *L)
     return 1;
 }
 
-int
+LUAMOD_API int
 luaopen_mtask_core(lua_State *L)
 {
 	luaL_checkversion(L);
 
 	luaL_Reg l[] = {
-		{ "send" , _send },
-		{ "genid", _genid },
-		{ "redirect", _redirect },
-		{ "command" , _command },
-		{ "intcommand", _intcommand },
-		{ "error", _error },
-		{ "tostring", _tostring },
-		{ "harbor", _harbor },
-		{ "pack", _luaseri_pack },
-		{ "unpack", _luaseri_unpack },
+		{ "send" , lsend },
+		{ "genid", lgenid },
+		{ "redirect", lredirect },
+		{ "command" , lcommand },
+		{ "intcommand", lintcommand },
+		{ "error", lerror },
+		{ "tostring", ltostring },
+		{ "harbor", lharbor },
+		{ "pack", luaseri_pack },
+		{ "unpack", luaseri_unpack },
 		{ "packstring", lpackstring },
 		{ "trash" , ltrash },
-		{ "callback", _callback },
+		{ "callback", lcallback },
         { "now", lnow }, //节点进程启动时间
 		{ NULL, NULL },
 	};

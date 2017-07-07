@@ -1,12 +1,12 @@
-#include "mtask.h"
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
 
 #include "mtask_handle.h"
 #include "mtask_server.h"
 #include "rwlock.h"
+#include "mtask.h"
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
 
 // mtask 服务编号的管理和分配
 

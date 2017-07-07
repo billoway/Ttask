@@ -63,6 +63,7 @@ logger_init(struct logger * inst, struct mtask_context *ctx, const char *parm)
 			return 1;
 		}
         inst->filename = mtask_malloc(strlen(parm)+1);//保存文件名
+        strcpy(inst->filename, parm);
 		inst->close = 1;
 	} else {
 		inst->handle = stdout; //没有配置日志文件则使用默认输出作为日志文件句柄

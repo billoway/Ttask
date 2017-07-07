@@ -1,8 +1,13 @@
 local mtask = require "mtask"
-local cluster = require "cluster"
-local snax = require "snax"
+local cluster = require "mtask.cluster"
+local snax = require "mtask.snax"
 
 mtask.start(function()
+	cluster.reload {
+		db = "127.0.0.1:2528",
+		db2 = "127.0.0.1:2529",
+	}
+
 	local sdb = mtask.newservice("simpledb")
 	-- register name "sdb" for simpledb, you can use cluster.query() later.
 	-- See cluster2.lua

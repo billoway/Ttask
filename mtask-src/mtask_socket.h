@@ -3,13 +3,13 @@
 
 struct mtask_context;
 
-#define MTASK_SOCKET_TYPE_DATA 1
-#define MTASK_SOCKET_TYPE_CONNECT 2
-#define MTASK_SOCKET_TYPE_CLOSE 3
-#define MTASK_SOCKET_TYPE_ACCEPT 4
-#define MTASK_SOCKET_TYPE_ERROR 5
-#define MTASK_SOCKET_TYPE_UDP 6
-#define MTASK_SOCKET_TYPE_WARNING 7
+#define MTASK_SOCKET_TYPE_DATA      1
+#define MTASK_SOCKET_TYPE_CONNECT   2
+#define MTASK_SOCKET_TYPE_CLOSE     3
+#define MTASK_SOCKET_TYPE_ACCEPT    4
+#define MTASK_SOCKET_TYPE_ERROR     5
+#define MTASK_SOCKET_TYPE_UDP       6
+#define MTASK_SOCKET_TYPE_WARNING   7
 
 struct mtask_socket_message {
     int type; //消息类型
@@ -28,7 +28,7 @@ int mtask_socket_poll();
 
 int mtask_socket_send(struct mtask_context *ctx, int id, void *buffer, int sz);
 
-void mtask_socket_send_lowpriority(struct mtask_context *ctx, int id, void *buffer, int sz);
+int mtask_socket_send_lowpriority(struct mtask_context *ctx, int id, void *buffer, int sz);
 
 int mtask_socket_listen(struct mtask_context *ctx, const char *host, int port, int backlog);
 

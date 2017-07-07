@@ -166,4 +166,9 @@ function snax.printf(fmt, ...)
 	mtask.error(string.format(fmt, ...))
 end
 
+function snax.profile_info(obj)
+	local t = snax.interface(obj.type)
+	return mtask_call(obj.handle, "snax", t.system.profile)
+end
+
 return snax

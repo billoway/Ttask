@@ -1,12 +1,12 @@
+#include <stdlib.h>
+#include <assert.h>
+#include <lua.h>
+#include <lauxlib.h>
+
 #include "mtask.h"
 #include "mtask_env.h"
 #include "mtask_spinlock.h"
 
-#include <lua.h>
-#include <lauxlib.h>
-
-#include <stdlib.h>
-#include <assert.h>
 //mtask 环境保存lua虚拟机
 struct mtask_env {
 	struct spinlock lock; //互斥锁

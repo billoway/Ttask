@@ -1,14 +1,18 @@
 local mtask = require "mtask"
 local harbor = require "mtask.harbor"
 require "mtask.manager"	-- import mtask.launch, ...
+local memory = require "mtask.memory"
 
 mtask.start(function()
+	local sharestring = tonumber(mtask.getenv "sharestring" or 4096)
+	memory.ssexpand(sharestring)
+
 	local standalone = mtask.getenv "standalone"
 
 	local launcher = assert(mtask.launch("snlua","launcher"))
 	mtask.name(".launcher", launcher)
 
-	local harbor_id = tonumber(mtask.getenv "harbor")
+	local harbor_id = tonumber(mtask.getenv "harbor" or 0)
 	if harbor_id == 0 then
 		assert(standalone ==  nil)
 		standalone = true

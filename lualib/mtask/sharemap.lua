@@ -1,4 +1,4 @@
-local stm = require "stm"
+local stm = require "mtask.stm"
 local sprotoloader = require "sprotoloader"
 local sproto = require "sproto"
 local setmetatable = setmetatable

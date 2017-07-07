@@ -1,6 +1,6 @@
 local mtask = require "mtask"
 local gateserver = require "snax.gateserver"
-local netpack = require "netpack"
+local netpack = require "mtask.netpack"
 
 local watchdog
 local connection = {}	-- fd -> connection : { fd , client, agent , ip, mode }
@@ -22,7 +22,7 @@ function handler.message(fd, msg, sz)
 	local c = connection[fd]
 	local agent = c.agent
 	if agent then
-		mtask.redirect(agent, c.client, "client", 0, msg, sz)
+		mtask.redirect(agent, c.client, "client", 1, msg, sz)
 	else
 		mtask.send(watchdog, "lua", "socket", "data", fd, netpack.tostring(msg, sz))
 	end

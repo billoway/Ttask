@@ -107,14 +107,16 @@ wb_free(struct write_block *wb)
 }
 
 static void
-rball_init(struct read_block * rb, char * buffer, int size) {
+rball_init(struct read_block * rb, char * buffer, int size)
+{
 	rb->buffer = buffer;
 	rb->len = size;
 	rb->ptr = 0;
 }
 
 static void *
-rb_read(struct read_block *rb, int sz) {
+rb_read(struct read_block *rb, int sz)
+{
 	if (rb->len < sz) {
 		return NULL;
 	}
@@ -126,19 +128,22 @@ rb_read(struct read_block *rb, int sz) {
 }
 
 static inline void
-wb_nil(struct write_block *wb) {
+wb_nil(struct write_block *wb)
+{
 	uint8_t n = TYPE_NIL;
 	wb_push(wb, &n, 1);
 }
 
 static inline void
-wb_boolean(struct write_block *wb, int boolean) {
+wb_boolean(struct write_block *wb, int boolean)
+{
 	uint8_t n = COMBINE_TYPE(TYPE_BOOLEAN , boolean ? 1 : 0);
 	wb_push(wb, &n, 1);
 }
 
 static inline void
-wb_integer(struct write_block *wb, lua_Integer v) {
+wb_integer(struct write_block *wb, lua_Integer v)
+{
 	int type = TYPE_NUMBER;
 	if (v == 0) {
 		uint8_t n = COMBINE_TYPE(type , TYPE_NUMBER_ZERO);
@@ -569,7 +574,7 @@ seri(lua_State *L, struct block *b, int len)
 }
 
 int
-_luaseri_unpack(lua_State *L)
+luaseri_unpack(lua_State *L)
 {
 	if (lua_isnoneornil(L,1)) {
 		return 0;
@@ -613,8 +618,8 @@ _luaseri_unpack(lua_State *L)
 	return lua_gettop(L);
 }
 //lua数据结构的序列化和反序列化  lua数据结构 ==》userdata + size
-int
-_luaseri_pack(lua_State *L)
+LUAMOD_API int
+luaseri_pack(lua_State *L)
 {
 	struct block temp;
 	temp.next = NULL;

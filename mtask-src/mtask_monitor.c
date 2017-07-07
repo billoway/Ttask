@@ -1,12 +1,12 @@
+#include <stdlib.h>
+#include <string.h>
+
 #include "mtask.h"
 
 #include "mtask_monitor.h"
 #include "mtask_server.h"
 #include "mtask.h"
 #include "mtask_atomic.h"
-
-#include <stdlib.h>
-#include <string.h>
 
 // 监视的结构
 struct mtask_monitor {

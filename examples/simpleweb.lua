@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local socket = require "socket"
+local socket = require "mtask.socket"
 local httpd = require "http.httpd"
 local sockethelper = require "http.sockethelper"
 local urllib = require "http.url"

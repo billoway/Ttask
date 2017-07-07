@@ -1,12 +1,12 @@
-#include "mtask.h"
-#include "mtask_handle.h"
-#include "mtask_mq.h"
-#include "mtask_server.h"
-
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+#include "mtask.h"
+#include "mtask_handle.h"
+#include "mtask_mq.h"
+#include "mtask_server.h"
 
 #define LOG_MESSAGE_SIZE 256 // 日志的大小
 
@@ -29,7 +29,7 @@ mtask_error(struct mtask_context * context, const char *msg, ...)
 	va_start(ap,msg); //ap指向msg之后的参数
 	int len = vsnprintf(tmp, LOG_MESSAGE_SIZE, msg, ap);
 	va_end(ap);
-	if (len < LOG_MESSAGE_SIZE) {
+	if (len >=0 && len < LOG_MESSAGE_SIZE) {
 		data = mtask_strdup(tmp);// strdup() 将串拷贝到新建的位置处 得到实际的 msg
 	} else {
 		int max_size = LOG_MESSAGE_SIZE;

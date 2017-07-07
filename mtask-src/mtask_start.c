@@ -1,3 +1,11 @@
+#include <pthread.h>
+#include <unistd.h>
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <signal.h>
+
 #include "mtask.h"
 #include "mtask_server.h"
 #include "mtask_imp.h"
@@ -10,13 +18,7 @@
 #include "mtask_daemon.h"
 #include "mtask_harbor.h"
 
-#include <pthread.h>
-#include <unistd.h>
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <signal.h>
+
 //监控结构
 struct monitor {
 	int count;                  //工作线程数量
@@ -273,6 +275,7 @@ mtask_start(struct mtask_config * config)
 	mtask_module_init(config->module_path);//初始化模块管理
 	mtask_timer_init();                    //初始化定时器
 	mtask_socket_init();                   //初始化SOCKET_SERVER
+    mtask_profile_enable(config->profile);
 
 	struct mtask_context *ctx = mtask_context_new(config->logservice, config->logger);
 	if (ctx == NULL) {

@@ -1,13 +1,14 @@
-#include "mtask.h"
-#include "mtask_mq.h"
-#include "mtask_handle.h"
-#include "mtask_spinlock.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <stdbool.h>
+
+#include "mtask.h"
+#include "mtask_mq.h"
+#include "mtask_handle.h"
+#include "mtask_spinlock.h"
 
 #define DEFAULT_QUEUE_SIZE 64       //默认队列大小
 #define MAX_GLOBAL_MQ 0x10000       //最大的全局消息队列的大小 64K

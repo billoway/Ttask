@@ -13,7 +13,8 @@
 // lua 服务生成器
 // lua服务的消息　先到 service_snlua，再分发到lua服务中
 // 每个lua服务其实　是一个service_snlua + 实际的lua服务　总和
-//mtask_start中调用bootstrap(ctx, config->bootstrap); //创建snlua服务模块，及ctx
+//mtask_start中调用bootstrap(ctx, config->bootstrap);
+//创建snlua服务模块，及ctx
 //参数为 snlua bootstrap
 
 #define MEMORY_WARNING_REPORT (1024 * 1024 * 32)
@@ -60,9 +61,8 @@ traceback (lua_State *L)
 	const char *msg = lua_tostring(L, 1);
 	if (msg)
 		luaL_traceback(L, L, msg, 1);
-	else {
+	else
 		lua_pushliteral(L, "(no error message)");
-	}
 	return 1;
 }
 
@@ -173,15 +173,36 @@ snlua_init(struct snlua *l, struct mtask_context *ctx, const char * args)
 	return 0;
 }
 
+static void *
+lalloc(void * ud, void *ptr, size_t osize, size_t nsize)
+{
+    struct snlua *l = ud;
+    size_t mem = l->mem;
+    l->mem += nsize;
+    if (ptr)
+        l->mem -= osize;
+    if (l->mem_limit != 0 && l->mem > l->mem_limit) {
+        if (ptr == NULL || nsize > osize) {
+            l->mem = mem;
+            return NULL;
+        }
+    }
+    if (l->mem > l->mem_report) {
+        l->mem_report *= 2;
+        mtask_error(l->ctx, "Memory warning %.2f M", (float)l->mem / (1024 * 1024));
+    }
+    return mtask_lalloc(ptr, osize, nsize);
+}
+
 struct snlua *
 snlua_create(void)
 {
-	struct snlua * l = mtask_malloc(sizeof(*l));
-	memset(l,0,sizeof(*l));
-	l->L = lua_newstate(mtask_lalloc, NULL);//生成新的lua_state 放到snlua的l中
+    struct snlua * l = mtask_malloc(sizeof(*l));
+    memset(l,0,sizeof(*l));
     l->mem_report = MEMORY_WARNING_REPORT;
     l->mem_limit = 0;
-	return l;
+    l->L = lua_newstate(lalloc, l);
+    return l;
 }
 
 void

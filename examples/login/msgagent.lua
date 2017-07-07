@@ -46,7 +46,7 @@ mtask.start(function()
 	end)
 
 	mtask.dispatch("client", function(_,_, msg)
-		-- the simple ehco service
+		-- the simple echo service
 		mtask.sleep(10)	-- sleep a while
 		mtask.ret(msg)
 	end)

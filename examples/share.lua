@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local sharedata = require "sharedata"
+local sharedata = require "mtask.sharedata"
 
 local mode = ...
 

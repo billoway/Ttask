@@ -1,5 +1,5 @@
 /*
-** $Id: lua.c,v 1.225 2015/03/30 15:42:59 roberto Exp $
+** $Id: lua.c,v 1.230 2017/01/12 17:14:26 roberto Exp $
 ** Lua stand-alone interpreter
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,8 @@
 
 #include "lauxlib.h"
 #include "lualib.h"
+#include "lstring.h"
+
 
 
 #if !defined(LUA_PROMPT)
@@ -37,8 +39,7 @@
 #define LUA_INIT_VAR		"LUA_INIT"
 #endif
 
-#define LUA_INITVARVERSION  \
-	LUA_INIT_VAR "_" LUA_VERSION_MAJOR "_" LUA_VERSION_MINOR
+#define LUA_INITVARVERSION	LUA_INIT_VAR LUA_VERSUFFIX
 
 
 /*
@@ -55,6 +56,8 @@
 #elif defined(LUA_USE_WINDOWS)	/* }{ */
 
 #include <io.h>
+#include <windows.h>
+
 #define lua_stdin_is_tty()	_isatty(_fileno(stdin))
 
 #else				/* }{ */
@@ -324,24 +327,20 @@ static int pushline (lua_State *L, int firstline) {
 
 
 /*
-** Try to compile line on the stack as 'return <line>'; on return, stack
+** Try to compile line on the stack as 'return <line>;'; on return, stack
 ** has either compiled chunk or original line (if compilation failed).
 */
 static int addreturn (lua_State *L) {
-  int status;
-  size_t len; const char *line;
-  lua_pushliteral(L, "return ");
-  lua_pushvalue(L, -2);  /* duplicate line */
-  lua_concat(L, 2);  /* new line is "return ..." */
-  line = lua_tolstring(L, -1, &len);
-  if ((status = luaL_loadbuffer(L, line, len, "=stdin")) == LUA_OK) {
-    lua_remove(L, -3);  /* remove original line */
-    line += sizeof("return")/sizeof(char);  /* remove 'return' for history */
+  const char *line = lua_tostring(L, -1);  /* original line */
+  const char *retline = lua_pushfstring(L, "return %s;", line);
+  int status = luaL_loadbuffer(L, retline, strlen(retline), "=stdin");
+  if (status == LUA_OK) {
+    lua_remove(L, -2);  /* remove modified line */
     if (line[0] != '\0')  /* non empty? */
       lua_saveline(L, line);  /* keep history */
   }
   else
-    lua_pop(L, 2);  /* remove result from 'luaL_loadbuffer' and new line */
+    lua_pop(L, 2);  /* pop result from 'luaL_loadbuffer' and modified line */
   return status;
 }
 
@@ -461,7 +460,7 @@ static int handle_script (lua_State *L, char **argv) {
 /*
 ** Traverses all arguments from 'argv', returning a mask with those
 ** needed before running any Lua code (or an error code if it finds
-** any invalid argument). 'first' returns the first not-handled argument 
+** any invalid argument). 'first' returns the first not-handled argument
 ** (either the script name or a bad argument in case of error).
 */
 static int collectargs (char **argv, int *first) {
@@ -485,7 +484,7 @@ static int collectargs (char **argv, int *first) {
         args |= has_E;
         break;
       case 'i':
-        args |= has_i;  /* (-i implies -v) *//* FALLTHROUGH */ 
+        args |= has_i;  /* (-i implies -v) *//* FALLTHROUGH */
       case 'v':
         if (argv[i][2] != '\0')  /* extra characters after 1st? */
           return has_error;  /* invalid option */
@@ -531,6 +530,7 @@ static int runargs (lua_State *L, char **argv, int n) {
   }
   return 1;
 }
+
 
 
 static int handle_luainit (lua_State *L) {
@@ -593,13 +593,12 @@ static int pmain (lua_State *L) {
   return 1;
 }
 
-#ifdef LUA_DEBUG
-int mainlua (int argc, char **argv) {
-#else
-    int main (int argc, char **argv) {
-#endif
+
+int main (int argc, char **argv) {
   int status, result;
-  lua_State *L = luaL_newstate();  /* create state */
+  lua_State *L;
+  luaS_initshr();  /* init global short string table */
+  L = luaL_newstate();  /* create state */
   if (L == NULL) {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;
@@ -611,6 +610,7 @@ int mainlua (int argc, char **argv) {
   result = lua_toboolean(L, -1);  /* get result */
   report(L, status);
   lua_close(L);
+  luaS_exitshr();
   return (result && status == LUA_OK) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 

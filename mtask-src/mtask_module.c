@@ -1,14 +1,13 @@
-#include "mtask.h"
-
-#include "mtask_module.h"
-#include "mtask_spinlock.h"
-
 #include <assert.h>
 #include <string.h>
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+
+#include "mtask.h"
+#include "mtask_module.h"
+#include "mtask_spinlock.h"
 
 // 动态链接库 .so 的加载 和管理模块
 
@@ -76,22 +75,33 @@ _query(const char * name)
 	}
 	return NULL;
 }
+
+static void *
+get_api(struct mtask_module *mod, const char *api_name)
+{
+    size_t name_size = strlen(mod->name);
+    size_t api_size = strlen(api_name);
+    char tmp[name_size + api_size + 1];
+    memcpy(tmp, mod->name, name_size);
+    memcpy(tmp+name_size, api_name, api_size+1);
+    char *ptr = strrchr(tmp, '.');
+    if (ptr == NULL) {
+        ptr = tmp;
+    } else {
+        ptr = ptr + 1;
+    }
+    return dlsym(mod->module, ptr);
+}
+
 //使用dlsym查找so中的xxx_create xxx_init xxx_release xxx_signal 函数的指针
 // dlsym() 根据动态链接库操作句柄与符号，返回符号对应的地址。
 static int
 _open_sym(struct mtask_module *mod)
 {
-	size_t name_size = strlen(mod->name);
-	char tmp[name_size + 9]; // create/init/release/signal , longest name is release (7)
-	memcpy(tmp, mod->name, name_size);
-	strcpy(tmp+name_size, "_create");
-	mod->create = dlsym(mod->module, tmp);
-	strcpy(tmp+name_size, "_init");
-	mod->init = dlsym(mod->module, tmp);
-	strcpy(tmp+name_size, "_release");
-	mod->release = dlsym(mod->module, tmp);
-	strcpy(tmp+name_size, "_signal");
-	mod->signal = dlsym(mod->module, tmp);
+    mod->create = get_api(mod, "_create");
+    mod->init = get_api(mod, "_init");
+    mod->release = get_api(mod, "_release");
+    mod->signal = get_api(mod, "_signal");
 
 	return mod->init == NULL;
 }

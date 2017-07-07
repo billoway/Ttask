@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <fcntl.h>
 
 #include "mtask_daemon.h"
 

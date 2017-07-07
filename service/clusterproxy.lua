@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local cluster = require "cluster"
+local cluster = require "mtask.cluster"
 require "mtask.manager"	-- inject mtask.forward_type
 
 local node, address = ...
@@ -23,6 +23,10 @@ mtask.forward_type( forward_map ,function()
 		address = n
 	end
 	mtask.dispatch("system", function (session, source, msg, sz)
-		mtask.ret(mtask.rawcall(clusterd, "lua", mtask.pack("req", node, address, msg, sz)))
+		if session == 0 then
+			mtask.send(clusterd, "lua", "push", node, address, msg, sz)
+		else
+			mtask.ret(mtask.rawcall(clusterd, "lua", mtask.pack("req", node, address, msg, sz)))
+		end
 	end)
 end)

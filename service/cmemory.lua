@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local memory = require "memory"
+local memory = require "mtask.memory"
 
 memory.dumpinfo()
 --memory.dump()

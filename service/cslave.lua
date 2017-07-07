@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local socket = require "socket"
+local socket = require "mtask.socket"
 require "mtask.manager"	-- import mtask.launch, ...
 local table = table
 
@@ -215,6 +215,7 @@ function harbor.QUERYNAME(fd, name)
 	end
 	local queue = queryname[name]
 	if queue == nil then
+		socket.write(fd, pack_package("Q", name))
 		queue = { mtask.response() }
 		queryname[name] = queue
 	else

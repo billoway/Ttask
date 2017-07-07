@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local socket = require "socket"
+local socket = require "mtask.socket"
 
 --[[
 	master manage data :

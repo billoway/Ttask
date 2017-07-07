@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local mc = require "multicast.core"
+local mc = require "mtask.multicast.core"
 
 local multicastd
 local multicast = {}

@@ -24,7 +24,10 @@ end
 function command.STAT()
 	local list = {}
 	for k,v in pairs(services) do
-		local stat = mtask.call(k,"debug","STAT")
+		local ok, stat = pcall(mtask.call,k,"debug","STAT")
+		if not ok then
+			stat = string.format("ERROR (%s)",v)
+		end
 		list[mtask.address(k)] = stat
 	end
 	return list
@@ -41,8 +44,12 @@ end
 function command.MEM()
 	local list = {}
 	for k,v in pairs(services) do
-		local kb, bytes = mtask.call(k,"debug","MEM")
-		list[mtask.address(k)] = string.format("%.2f Kb (%s)",kb,v)
+		local ok, kb, bytes = pcall(mtask.call,k,"debug","MEM")
+		if not ok then
+			list[mtask.address(k)] = string.format("ERROR (%s)",v)
+		else
+			list[mtask.address(k)] = string.format("%.2f Kb (%s)",kb,v)
+		end
 	end
 	return list
 end

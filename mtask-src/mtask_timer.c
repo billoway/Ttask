@@ -1,11 +1,3 @@
-#include "mtask.h"
-
-#include "mtask_timer.h"
-#include "mtask_mq.h"
-#include "mtask_server.h"
-#include "mtask_handle.h"
-#include "mtask_spinlock.h"
-
 #include <time.h>
 #include <assert.h>
 #include <string.h>
@@ -17,6 +9,14 @@
 #include <mach/task.h>
 #include <mach/mach.h>
 #endif
+
+#include "mtask.h"
+
+#include "mtask_timer.h"
+#include "mtask_mq.h"
+#include "mtask_server.h"
+#include "mtask_handle.h"
+#include "mtask_spinlock.h"
 
 // mtask 定时器的实现为linux内核的标准做法  精度为 0.01s 对游戏一般来说够了 高精度的定时器很费CPU
 
@@ -114,8 +114,8 @@ timer_add(struct timer *T,void *arg,size_t sz,int time)
 
 	SPIN_LOCK(T);
 
-		node->expire = time + T->time;//在当前流过的时间基础是加上定时器时间
-		add_node(T,node);
+    node->expire = time + T->time;//在当前流过的时间基础是加上定时器时间
+    add_node(T,node);
 
 	SPIN_UNLOCK(T);
 }
@@ -232,7 +232,7 @@ timer_create_timer()
 int
 mtask_timeout(uint32_t handle, int time, int session)
 {
-	if (time == 0) { //time<0 理解加入消息队列
+	if (time == 0) { //time<0 加入消息队列
 		struct mtask_message message;
 		message.source = 0;
 		message.session = session;
@@ -254,7 +254,8 @@ mtask_timeout(uint32_t handle, int time, int session)
 
 // centisecond: 1/100 second
 static void
-systime(uint32_t *sec, uint32_t *cs) {
+systime(uint32_t *sec, uint32_t *cs)
+{
 #if !defined(__APPLE__)
 	struct timespec ti;
 	clock_gettime(CLOCK_REALTIME, &ti);
@@ -312,7 +313,7 @@ mtask_updatetime(void)
 }
 //开机时间
 uint32_t
-mtask_start_time(void)
+mtask_starttime(void)
 {
     return TI->starttime;
 }

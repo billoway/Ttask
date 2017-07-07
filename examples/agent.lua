@@ -1,6 +1,6 @@
 local mtask = require "mtask"
-local netpack = require "netpack"
-local socket = require "socket"
+local netpack = require "mtask.netpack"
+local socket = require "mtask.socket"
 local sproto = require "sproto"
 local sprotoloader = require "sprotoloader"
 

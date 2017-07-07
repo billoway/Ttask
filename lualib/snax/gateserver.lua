@@ -1,6 +1,6 @@
 local mtask = require "mtask"
-local netpack = require "netpack"
-local socketdriver = require "socketdriver"
+local netpack = require "mtask.netpack"
+local socketdriver = require "mtask.socketdriver"
 
 local gateserver = {}
 
@@ -48,7 +48,6 @@ function gateserver.start(handler)
 	function CMD.close()
 		assert(socket)
 		socketdriver.close(socket)
-		socket = nil
 	end
 
 	local MSG = {}
@@ -101,17 +100,26 @@ function gateserver.start(handler)
 	end
 
 	function MSG.close(fd)
-		if handler.disconnect then
-			handler.disconnect(fd)
+		if fd ~= socket then
+			if handler.disconnect then
+				handler.disconnect(fd)
+			end
+			close_fd(fd)
+		else
+			socket = nil
 		end
-		close_fd(fd)
 	end
 
 	function MSG.error(fd, msg)
-		if handler.error then
-			handler.error(fd, msg)
+		if fd == socket then
+			socketdriver.close(fd)
+			mtask.error("gateserver close listen socket, accpet error:",msg)
+		else
+			if handler.error then
+				handler.error(fd, msg)
+			end
+			close_fd(fd)
 		end
-		close_fd(fd)
 	end
 
 	function MSG.warning(fd, size)

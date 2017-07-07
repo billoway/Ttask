@@ -7,6 +7,7 @@
 #define mtask_calloc calloc
 #define mtask_realloc realloc
 #define mtask_free free
+#define mtask_memalign memalign
 
 void * mtask_malloc(size_t sz);
 
@@ -18,6 +19,8 @@ void mtask_free(void *ptr);
 
 char * mtask_strdup(const char *str);
 
-void * mtask_lalloc(void *ud, void *ptr, size_t osize, size_t nsize);	// use for lua
+void * mtask_lalloc(void *ptr, size_t osize, size_t nsize);	// use for lua
+
+void * mtask_memalign(size_t alignment, size_t size);
 
 #endif

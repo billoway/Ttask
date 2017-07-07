@@ -1,8 +1,8 @@
 local mtask = require "mtask"
 local gateserver = require "snax.gateserver"
-local netpack = require "netpack"
-local crypt = require "crypt"
-local socketdriver = require "socketdriver"
+local netpack = require "mtask.netpack"
+local crypt = require "mtask.crypt"
+local socketdriver = require "mtask.socketdriver"
 local assert = assert
 local b64encode = crypt.base64encode
 local b64decode = crypt.base64decode

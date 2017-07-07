@@ -1312,42 +1312,47 @@ free_buffer(struct socket_server *ss, const void * buffer, int sz) {
 	so.free_func((void *)buffer);
 }
 
-// return -1 when error
-int64_t 
-socket_server_send(struct socket_server *ss, int id, const void * buffer, int sz) {
-	struct socket * s = &ss->slot[HASH_ID(id)];
-	if (s->id != id || s->type == SOCKET_TYPE_INVALID) {
-		free_buffer(ss, buffer, sz);
-		return -1;
-	}
-
-	struct request_package request;
-	request.u.send.id = id;
-	request.u.send.sz = sz;
-	request.u.send.buffer = (char *)buffer;
-
-	send_request(ss, &request, 'D', sizeof(request.u.send));
-	return s->wb_size;
+// return -1 when error, 0 when success
+int
+socket_server_send(struct socket_server *ss, int id, const void * buffer, int sz)
+{
+    struct socket * s = &ss->slot[HASH_ID(id)];
+    if (s->id != id || s->type == SOCKET_TYPE_INVALID) {
+        free_buffer(ss, buffer, sz);
+        return -1;
+    }
+    
+    struct request_package request;
+    request.u.send.id = id;
+    request.u.send.sz = sz;
+    request.u.send.buffer = (char *)buffer;
+    
+    send_request(ss, &request, 'D', sizeof(request.u.send));
+    return 0;
 }
 
-void 
-socket_server_send_lowpriority(struct socket_server *ss, int id, const void * buffer, int sz) {
-	struct socket * s = &ss->slot[HASH_ID(id)];
-	if (s->id != id || s->type == SOCKET_TYPE_INVALID) {
-		free_buffer(ss, buffer, sz);
-		return;
-	}
-
-	struct request_package request;
-	request.u.send.id = id;
-	request.u.send.sz = sz;
-	request.u.send.buffer = (char *)buffer;
-
-	send_request(ss, &request, 'P', sizeof(request.u.send));
+// return -1 when error, 0 when success
+int
+socket_server_send_lowpriority(struct socket_server *ss, int id, const void * buffer, int sz)
+{
+    struct socket * s = &ss->slot[HASH_ID(id)];
+    if (s->id != id || s->type == SOCKET_TYPE_INVALID) {
+        free_buffer(ss, buffer, sz);
+        return -1;
+    }
+    
+    struct request_package request;
+    request.u.send.id = id;
+    request.u.send.sz = sz;
+    request.u.send.buffer = (char *)buffer;
+    
+    send_request(ss, &request, 'P', sizeof(request.u.send));
+    return 0;
 }
 
 void
-socket_server_exit(struct socket_server *ss) {
+socket_server_exit(struct socket_server *ss)
+{
 	struct request_package request;
 	send_request(ss, &request, 'X', 0);
 }
@@ -1523,37 +1528,38 @@ socket_server_udp(struct socket_server *ss, uintptr_t opaque, const char * addr,
 	return id;
 }
 
-int64_t 
-socket_server_udp_send(struct socket_server *ss, int id, const struct socket_udp_address *addr, const void *buffer, int sz) {
-	struct socket * s = &ss->slot[HASH_ID(id)];
-	if (s->id != id || s->type == SOCKET_TYPE_INVALID) {
-		free_buffer(ss, buffer, sz);
-		return -1;
-	}
-
-	struct request_package request;
-	request.u.send_udp.send.id = id;
-	request.u.send_udp.send.sz = sz;
-	request.u.send_udp.send.buffer = (char *)buffer;
-
-	const uint8_t *udp_address = (const uint8_t *)addr;
-	int addrsz;
-	switch (udp_address[0]) {
-	case PROTOCOL_UDP:
-		addrsz = 1+2+4;		// 1 type, 2 port, 4 ipv4
-		break;
-	case PROTOCOL_UDPv6:
-		addrsz = 1+2+16;	// 1 type, 2 port, 16 ipv6
-		break;
-	default:
-		free_buffer(ss, buffer, sz);
-		return -1;
-	}
-
-	memcpy(request.u.send_udp.address, udp_address, addrsz);	
-
-	send_request(ss, &request, 'A', sizeof(request.u.send_udp.send)+addrsz);
-	return s->wb_size;
+int
+socket_server_udp_send(struct socket_server *ss, int id, const struct socket_udp_address *addr, const void *buffer, int sz)
+{
+    struct socket * s = &ss->slot[HASH_ID(id)];
+    if (s->id != id || s->type == SOCKET_TYPE_INVALID) {
+        free_buffer(ss, buffer, sz);
+        return -1;
+    }
+    
+    struct request_package request;
+    request.u.send_udp.send.id = id;
+    request.u.send_udp.send.sz = sz;
+    request.u.send_udp.send.buffer = (char *)buffer;
+    
+    const uint8_t *udp_address = (const uint8_t *)addr;
+    int addrsz;
+    switch (udp_address[0]) {
+        case PROTOCOL_UDP:
+            addrsz = 1+2+4;		// 1 type, 2 port, 4 ipv4
+            break;
+        case PROTOCOL_UDPv6:
+            addrsz = 1+2+16;	// 1 type, 2 port, 16 ipv6
+            break;
+        default:
+            free_buffer(ss, buffer, sz);
+            return -1;
+    }
+    
+    memcpy(request.u.send_udp.address, udp_address, addrsz);
+    
+    send_request(ss, &request, 'A', sizeof(request.u.send_udp.send)+addrsz);
+    return 0;
 }
 
 int

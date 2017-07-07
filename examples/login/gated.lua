@@ -1,5 +1,5 @@
 local msgserver = require "snax.msgserver"
-local crypt = require "crypt"
+local crypt = require "mtask.crypt"
 local mtask = require "mtask"
 
 local loginservice = tonumber(...)

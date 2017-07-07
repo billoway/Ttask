@@ -1,11 +1,11 @@
 #ifndef mtask_log_h
 #define mtask_log_h
 
-#include "mtask_env.h"
-#include "mtask.h"
-
 #include <stdio.h>
 #include <stdint.h>
+
+#include "mtask_env.h"
+#include "mtask.h"
 
 FILE * mtask_log_open(struct mtask_context * ctx, uint32_t handle);
 

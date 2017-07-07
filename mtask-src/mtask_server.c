@@ -574,7 +574,7 @@ cmd_setenv(struct mtask_context * context, const char * param)
 static const char *
 cmd_starttime(struct mtask_context * context, const char * param)
 {
-	uint32_t sec = mtask_start_time();
+	uint32_t sec = mtask_starttime();
 	sprintf(context->result,"%u",sec);
 	return context->result;
 }

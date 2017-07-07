@@ -8,17 +8,31 @@
 #include "mtask_atomic.h"
 #include "mtask.h"
 
+// turn on MEMORY_CHECK can do more memory check, such as double free
+// #define MEMORY_CHECK
+
+#define MEMORY_ALLOCTAG     0x20140605
+#define MEMORY_FREETAG      0x0badf00d
+
 static size_t _used_memory = 0;
 static size_t _memory_block = 0;
-typedef struct _mem_data {
-	uint32_t handle;
-	ssize_t allocated;
-} mem_data;
+
+struct mem_data {
+    uint32_t handle;
+    ssize_t allocated;
+};
+
+struct mem_cookie {
+    uint32_t handle;
+#ifdef MEMORY_CHECK
+    uint32_t dogtag;
+#endif
+};
 
 #define SLOT_SIZE 0x10000
-#define PREFIX_SIZE sizeof(uint32_t)
+#define PREFIX_SIZE sizeof(struct mem_cookie)
 
-static mem_data mem_stats[SLOT_SIZE];
+static struct mem_data mem_stats[SLOT_SIZE];
 
 
 #ifndef NOUSE_JEMALLOC
@@ -76,27 +90,41 @@ update_xmalloc_stat_free(uint32_t handle, size_t __n)
 inline static void*
 fill_prefix(char* ptr)
 {
-	uint32_t handle = mtask_current_handle();
-	size_t size = je_malloc_usable_size(ptr);
-	uint32_t *p = (uint32_t *)(ptr + size - sizeof(uint32_t));
-	memcpy(p, &handle, sizeof(handle));
-
-	update_xmalloc_stat_alloc(handle, size);
-	return ptr;
+    uint32_t handle = mtask_current_handle();
+    size_t size = je_malloc_usable_size(ptr);
+    struct mem_cookie *p = (struct mem_cookie *)(ptr + size - sizeof(struct mem_cookie));
+    memcpy(&p->handle, &handle, sizeof(handle));
+#ifdef MEMORY_CHECK
+    uint32_t dogtag = MEMORY_ALLOCTAG;
+    memcpy(&p->dogtag, &dogtag, sizeof(dogtag));
+#endif
+    update_xmalloc_stat_alloc(handle, size);
+    return ptr;
 }
 
 inline static void*
 clean_prefix(char* ptr)
 {
-	size_t size = je_malloc_usable_size(ptr);
-	uint32_t *p = (uint32_t *)(ptr + size - sizeof(uint32_t));
-	uint32_t handle;
-	memcpy(&handle, p, sizeof(handle));
-	update_xmalloc_stat_free(handle, size);
-	return ptr;
+    size_t size = je_malloc_usable_size(ptr);
+    struct mem_cookie *p = (struct mem_cookie *)(ptr + size - sizeof(struct mem_cookie));
+    uint32_t handle;
+    memcpy(&handle, &p->handle, sizeof(handle));
+#ifdef MEMORY_CHECK
+    uint32_t dogtag;
+    memcpy(&dogtag, &p->dogtag, sizeof(dogtag));
+    if (dogtag == MEMORY_FREETAG) {
+        fprintf(stderr, "xmalloc: double free in :%08x\n", handle);
+    }
+    assert(dogtag == MEMORY_ALLOCTAG);	// memory out of bounds
+    dogtag = MEMORY_FREETAG;
+    memcpy(&p->dogtag, &dogtag, sizeof(dogtag));
+#endif
+    update_xmalloc_stat_free(handle, size);
+    return ptr;
 }
 
-static void malloc_oom(size_t size)
+static void
+malloc_oom(size_t size)
 {
 	fprintf(stderr, "xmalloc: Out of memory trying to allocate %zu bytes\n",
 		size);
@@ -180,6 +208,14 @@ mtask_calloc(size_t nmemb,size_t size)
 	return fill_prefix(ptr);
 }
 
+void *
+mtask_memalign(size_t alignment, size_t size)
+{
+    void* ptr = je_memalign(alignment, size + PREFIX_SIZE);
+    if(!ptr) malloc_oom(size);
+    return fill_prefix(ptr);
+}
+
 #else
 
 // for mtask_lalloc use
@@ -227,7 +263,7 @@ dump_c_mem()
 	size_t total = 0;
 	mtask_error(NULL, "dump all service mem:");
 	for(i=0; i<SLOT_SIZE; i++) {
-		mem_data* data = &mem_stats[i];
+		struct mem_data* data = &mem_stats[i];
 		if(data->handle != 0 && data->allocated != 0) {
 			total += data->allocated;
 			mtask_error(NULL, "0x%x -> %zdkb", data->handle, data->allocated >> 10);
@@ -246,7 +282,7 @@ mtask_strdup(const char *str)
 }
 
 void * 
-mtask_lalloc(void *ud, void *ptr, size_t osize, size_t nsize)
+mtask_lalloc(void *ptr, size_t osize, size_t nsize)
 {
 	if (nsize == 0) {
 		mtask_free(ptr);
@@ -262,7 +298,7 @@ dump_mem_lua(lua_State *L)
 	int i;
 	lua_newtable(L);
 	for(i=0; i<SLOT_SIZE; i++) {
-		mem_data* data = &mem_stats[i];
+		struct mem_data* data = &mem_stats[i];
 		if(data->handle != 0 && data->allocated != 0) {
 			lua_pushinteger(L, data->allocated);
 			lua_rawseti(L, -2, (lua_Integer)data->handle);
@@ -277,7 +313,7 @@ malloc_current_memory(void)
     uint32_t handle = mtask_current_handle();
     int i;
     for(i=0; i<SLOT_SIZE; i++) {
-        mem_data* data = &mem_stats[i];
+        struct mem_data* data = &mem_stats[i];
         if(data->handle == (uint32_t)handle && data->allocated != 0) {
             return (size_t) data->allocated;
         }
