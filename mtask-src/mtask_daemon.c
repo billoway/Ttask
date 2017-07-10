@@ -36,12 +36,12 @@ write_pid(const char *pidfile)
 	int pid = 0;
 	int fd = open(pidfile, O_RDWR|O_CREAT, 0644);
 	if (fd == -1) {
-		fprintf(stderr, "Can't create %s.\n", pidfile);//打印到错误的标准输出
+		fprintf(stderr, "Can't create pidfile [%s].\n", pidfile);//打印到错误的标准输出
 		return 0;
 	}
 	f = fdopen(fd, "r+");//取文件句柄 使用它一个标准i/o流与之结合
 	if (f == NULL) {
-		fprintf(stderr, "Can't open %s.\n", pidfile);
+		fprintf(stderr, "Can't open pidfile [%s].\n", pidfile);
 		return 0;
 	}
 

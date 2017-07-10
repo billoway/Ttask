@@ -25,5 +25,6 @@ local function console_main_loop()
 end
 
 mtask.start(function()
+	print("console.lua  start calling")
 	mtask.fork(console_main_loop)
 end)

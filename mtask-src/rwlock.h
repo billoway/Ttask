@@ -9,13 +9,15 @@ struct rwlock {
 };
 
 static inline void
-rwlock_init(struct rwlock *lock) {
+rwlock_init(struct rwlock *lock) 
+{
 	lock->write = 0;
 	lock->read = 0;
 }
 
 static inline void
-rwlock_rlock(struct rwlock *lock) {
+rwlock_rlock(struct rwlock *lock) 
+{
 	for (;;) {
 		while(lock->write) {//确保读取lock->write都是最新的
 			__sync_synchronize();
@@ -30,7 +32,8 @@ rwlock_rlock(struct rwlock *lock) {
 }
 
 static inline void
-rwlock_wlock(struct rwlock *lock) {
+rwlock_wlock(struct rwlock *lock) 
+{
 	while (__sync_lock_test_and_set(&lock->write,1)) {}//将*ptr设为value并返回*ptr操作之前的值。lock->write 设置为1
 	while(lock->read) {
 		__sync_synchronize();
@@ -38,12 +41,14 @@ rwlock_wlock(struct rwlock *lock) {
 }
 
 static inline void
-rwlock_wunlock(struct rwlock *lock) {
+rwlock_wunlock(struct rwlock *lock) 
+{
 	__sync_lock_release(&lock->write);//将*ptr置0
 }
 
 static inline void
-rwlock_runlock(struct rwlock *lock) {
+rwlock_runlock(struct rwlock *lock) 
+{
 	__sync_sub_and_fetch(&lock->read,1);
 }
 
@@ -59,27 +64,32 @@ struct rwlock {
 };
 
 static inline void
-rwlock_init(struct rwlock *lock) {
+rwlock_init(struct rwlock *lock) 
+{
 	pthread_rwlock_init(&lock->lock, NULL);//读写锁初始化
 }
 
 static inline void
-rwlock_rlock(struct rwlock *lock) {
+rwlock_rlock(struct rwlock *lock) 
+{
 	 pthread_rwlock_rdlock(&lock->lock);//等待读锁
 }
 
 static inline void
-rwlock_wlock(struct rwlock *lock) {
+rwlock_wlock(struct rwlock *lock) 
+{
 	 pthread_rwlock_wrlock(&lock->lock);//等待写锁
 }
 
 static inline void
-rwlock_wunlock(struct rwlock *lock) {
+rwlock_wunlock(struct rwlock *lock) 
+{
 	pthread_rwlock_unlock(&lock->lock);//解锁
 }
 
 static inline void
-rwlock_runlock(struct rwlock *lock) {
+rwlock_runlock(struct rwlock *lock) 
+{
 	pthread_rwlock_unlock(&lock->lock);//解锁
 }
 

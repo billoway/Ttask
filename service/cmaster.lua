@@ -108,6 +108,7 @@ local function monitor_slave(slave_id, slave_address)
 end
 
 mtask.start(function()
+	print("cmaster.lua start calling")
 	local master_addr = mtask.getenv "standalone"
 	mtask.error("master listen socket " .. tostring(master_addr))
 	local fd = socket.listen(master_addr)

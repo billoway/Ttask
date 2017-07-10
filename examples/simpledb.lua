@@ -15,6 +15,7 @@ function command.SET(key, value)
 end
 
 mtask.start(function()
+	print("simpledb.lua start calling")
 	mtask.dispatch("lua", function(session, address, cmd, ...)
 		cmd = cmd:upper()
 		if cmd == "PING" then

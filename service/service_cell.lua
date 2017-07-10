@@ -12,6 +12,7 @@ function init.init(code, ...)
 end
 
 mtask.start(function()
+	print("service_cell.lua  start calling")
 	mtask.dispatch("lua", function(_,_,cmd,...)
 		init[cmd](...)
 	end)

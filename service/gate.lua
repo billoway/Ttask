@@ -92,5 +92,6 @@ function handler.command(cmd, source, ...)
 	local f = assert(CMD[cmd])
 	return f(source, ...)
 end
+print("gate.lua start calling")
 
 gateserver.start(handler)

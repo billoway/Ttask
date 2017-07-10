@@ -224,9 +224,9 @@ send_message(lua_State *L, int source, int idx_type)
                 msg = NULL;
             }
             if (dest_string) {
-                session = mtask_sendname(context, 0, dest_string, type, session , msg, len);
+                session = mtask_sendname(context, source, dest_string, type, session , msg, len);
             } else {
-                session = mtask_send(context, 0, dest, type, session , msg, len);
+                session = mtask_send(context, source, dest, type, session , msg, len);
             }
             break;
         }
@@ -234,14 +234,14 @@ send_message(lua_State *L, int source, int idx_type)
             void * msg = lua_touserdata(L,idx_type+2);
             int size = (int)luaL_checkinteger(L,idx_type+3);
             if (dest_string) {
-                session = mtask_sendname(context, 0, dest_string, type | PTYPE_TAG_DONTCOPY, session, msg, size);
+                session = mtask_sendname(context, source, dest_string, type | PTYPE_TAG_DONTCOPY, session, msg, size);
             } else {
-                session = mtask_send(context, 0, dest, type | PTYPE_TAG_DONTCOPY, session, msg, size);
+                session = mtask_send(context, source, dest, type | PTYPE_TAG_DONTCOPY, session, msg, size);
             }
             break;
         }
         default:
-            luaL_error(L, "mtask.send invalid param %s", lua_typename(L, lua_type(L,idx_type+2)));
+            luaL_error(L, "invalid param %s", lua_typename(L, lua_type(L,idx_type+2)));
     }
     if (session < 0) {
         // send to invalid address
@@ -253,14 +253,14 @@ send_message(lua_State *L, int source, int idx_type)
 }
 /*
 	uint32 address
-	 string address
+        string address
 	integer type
 	integer session
 	string message
-	 lightuserdata message_ptr
-	 integer len
+         lightuserdata message_ptr
+         integer len
  */
-// mtask_context_send mtask_sendname /mtask_send-》mtask_harbor_send | mtask_context_push
+//  (mtask_sendname->mtask_harbor_send-> mtask_send) | (mtask_send-> mtask_context_push | mtask_harbor_send)
 static int
 lsend(lua_State *L)
 {
@@ -296,7 +296,7 @@ lerror(lua_State *L)
         }
     }
     luaL_pushresult(&b);//将字符串缓存入栈
-	mtask_error(context, "%s", luaL_checkstring(L,1));//错误信息发送到logger
+	mtask_error(context, "%s", lua_tostring(L,1));//错误信息发送到logger
 	return 0;
 }
 

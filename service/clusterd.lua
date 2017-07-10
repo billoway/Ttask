@@ -197,6 +197,7 @@ function command.socket(source, subcmd, fd, msg)
 end
 
 mtask.start(function()
+	print("clusterd.lua  start calling")
 	loadconfig()
 	mtask.dispatch("lua", function(session , source, cmd, ...)
 		local f = assert(command[cmd])

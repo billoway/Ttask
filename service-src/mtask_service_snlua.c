@@ -165,7 +165,7 @@ snlua_init(struct snlua *l, struct mtask_context *ctx, const char * args)
 	int sz = (int)strlen(args);
 	char * tmp = mtask_malloc(sz);
 	memcpy(tmp, args, sz);
-	mtask_callback(ctx, l , _launch_cb);//注册snlua的回到哦函数为launch_cb
+	mtask_callback(ctx, l , _launch_cb);//注册snlua的回调函数为launch_cb
 	const char * self = mtask_command(ctx, "REG", NULL);//服务注册名字 “:handle”
 	uint32_t handle_id = (uint32_t)strtoul(self+1, NULL, 16);
 	// it must be first message 给他自己发送一个信息，目的地为刚注册的地址，最终将该消息push到对应的mq上

@@ -47,7 +47,7 @@ static ssize_t*
 get_allocated_field(uint32_t handle)
 {
 	int h = (int)(handle & (SLOT_SIZE - 1));
-	mem_data *data = &mem_stats[h];
+	struct mem_data *data = &mem_stats[h];
 	uint32_t old_handle = data->handle;
 	ssize_t old_alloc = data->allocated;
 	if(old_handle == 0 || old_alloc <= 0) {
@@ -288,7 +288,7 @@ mtask_lalloc(void *ptr, size_t osize, size_t nsize)
 		mtask_free(ptr);
 		return NULL;
 	} else {
-		return mtask_realloc(ptr, nsize);
+		return raw_realloc(ptr, nsize);
 	}
 }
 

@@ -48,6 +48,7 @@ function CMD.close(fd)
 end
 
 mtask.start(function()
+	print("watchdog.lua start calling")
 	mtask.dispatch("lua", function(session, source, cmd, subcmd, ...)
 		if cmd == "socket" then
 			local f = SOCKET[subcmd]

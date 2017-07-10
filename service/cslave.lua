@@ -224,6 +224,7 @@ function harbor.QUERYNAME(fd, name)
 end
 
 mtask.start(function()
+	print("cslave.lua start calling")
 	local master_addr = mtask.getenv "master"
 	local harbor_id = tonumber(mtask.getenv "harbor")
 	local slave_address = assert(mtask.getenv "address")

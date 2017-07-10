@@ -35,6 +35,7 @@ local function dump_list(list)
 end
 
 mtask.start(function()
+	print("dbg.lua  start calling")
 	local list = mtask.call(".launcher","lua", table.unpack(cmd))
 	if list then
 		dump_list(list)

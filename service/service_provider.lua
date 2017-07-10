@@ -89,6 +89,7 @@ function provider.test(name)
 end
 
 mtask.start(function()
+	print("service_provider.lua  start calling")
 	mtask.dispatch("lua", function(session, address, cmd, ...)
 		provider[cmd](...)
 	end)

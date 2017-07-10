@@ -154,6 +154,7 @@ function CMD.monitor(name, obj)
 end
 
 mtask.start(function()
+	print("sharedatad.lua  start calling")
 	mtask.fork(collectobj)
 	mtask.dispatch("lua", function (session, source ,cmd, ...)
 		local f = assert(CMD[cmd])

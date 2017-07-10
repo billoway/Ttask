@@ -4,7 +4,9 @@ local sprotoloader = require "sprotoloader"
 local max_client = 64
 
 mtask.start(function()
-	mtask.error("Server start")
+	print("\n**************************************************")
+	print("Myself custom project TTc.lua Server start calling")
+	print("**************************************************\n")
 	mtask.uniqueservice("protoloader")
 	if not mtask.getenv "daemon" then
 		local console = mtask.newservice("console")

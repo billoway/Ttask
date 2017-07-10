@@ -336,7 +336,7 @@ forward_local_messsage(struct harbor *h, void *msg, int sz)
 	message_to_header((const uint32_t *)cookie, &header);
 
 	uint32_t destination = header.destination;
-	int type = (destination >> HANDLE_REMOTE_SHIFT) | PTYPE_TAG_DONTCOPY;
+	int type = destination >> HANDLE_REMOTE_SHIFT;
 	destination = (destination & HANDLE_MASK) | ((uint32_t)h->id << HANDLE_REMOTE_SHIFT);
 
     if (mtask_send(h->ctx, header.source, destination, type | PTYPE_TAG_DONTCOPY , (int)header.session, (void *)msg, sz-HEADER_COOKIE_LENGTH) < 0) {

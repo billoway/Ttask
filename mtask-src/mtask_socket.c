@@ -96,7 +96,7 @@ mtask_socket_poll()
             forward_message(MTASK_SOCKET_TYPE_CONNECT, true, &result);
             break;
         case SOCKET_ERROR:
-            forward_message(MTASK_SOCKET_TYPE_ERROR, false, &result);
+            forward_message(MTASK_SOCKET_TYPE_ERROR, true, &result);
             break;
         case SOCKET_ACCEPT:
             forward_message(MTASK_SOCKET_TYPE_ACCEPT, true, &result);

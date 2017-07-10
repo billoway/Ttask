@@ -64,8 +64,8 @@ end
 function harbor.CONNECT(id)
 	mtask.error("Can't connect to other harbor in single node mode")
 end
-
 mtask.start(function()
+	print("cdummy.lua start calling")
 	local harbor_id = tonumber(mtask.getenv "harbor")
 	assert(harbor_id == 0)
 

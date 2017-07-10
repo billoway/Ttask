@@ -91,6 +91,7 @@ function CMD.disconnect()
 end
 
 mtask.start(function()
+	print("agent.lua  start calling")
 	mtask.dispatch("lua", function(_,_, command, ...)
 		local f = CMD[command]
 		mtask.ret(mtask.pack(f(...)))
