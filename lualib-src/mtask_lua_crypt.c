@@ -998,6 +998,7 @@ luaopen_mtask_crypt(lua_State *L)
 }
 
 LUAMOD_API int
-luaopen_client_crypt(lua_State *L) {
+luaopen_client_crypt(lua_State *L)
+{
     return luaopen_mtask_crypt(L);
 }

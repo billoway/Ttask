@@ -76,6 +76,7 @@ end
 
 local function launch_service(service, ...)
 	local param = table.concat({...}, " ")
+	-- service 为要启动的服务名 param 为以空格分开的参数
 	local inst = mtask.launch(service, param)
 	local response = mtask.response()
 	if inst then
@@ -87,7 +88,7 @@ local function launch_service(service, ...)
 	end
 	return inst
 end
-
+--为发送此消息的源地址 service一般为启动lua服务的中介 一般为 snlua
 function command.LAUNCH(_, service, ...)
 	launch_service(service, ...)
 	return NORET

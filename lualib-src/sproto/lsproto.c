@@ -476,7 +476,8 @@ lpack(lua_State *L) {
 }
 
 static int
-lunpack(lua_State *L) {
+lunpack(lua_State *L)
+{
     size_t sz=0;
     const void * buffer = getbuffer(L, 1, &sz);
     void * output = lua_touserdata(L, lua_upvalueindex(1));

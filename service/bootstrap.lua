@@ -18,39 +18,40 @@ mtask.start(function()
 	print("bootstrap.lua  start calling")
 	local sharestring = tonumber(mtask.getenv "sharestring" or 4096)
 	memory.ssexpand(sharestring)
-
+	-- 获取 config 中的 standalone 参数，如果standalone存在，它应该是一个"ip地址:端口"
 	local standalone = mtask.getenv "standalone"
-
+	-- 启动 launcher 服务，用来管理所的本地服务
 	local launcher = assert(mtask.launch("snlua","launcher"))
 	mtask.name(".launcher", launcher)
 	print("bootstrap.lua mtask.launch snlua （Lua sanbox）")
-
+	-- 获取 config 中的 harbor 参数 默认为0
 	local harbor_id = tonumber(mtask.getenv "harbor" or 0)
+	-- 如果 harbor 为 0 (即工作在单节点模式下)
 	if harbor_id == 0 then
-		assert(standalone ==  nil)
+		assert(standalone ==  nil)-- 如果是单节点， standalone 不能配置
 		standalone = true
-		mtask.setenv("standalone", "true")
-
+		mtask.setenv("standalone", "true")-- 设置 standalone 的环境变量为true
+		-- 如果是单节点模式，则slave服务为 cdummy.lua
 		local ok, slave = pcall(mtask.newservice, "cdummy")
 		if not ok then
 			mtask.abort()
 		end
 		mtask.name(".cslave", slave)
 
-	else
-		if standalone then
+	else -- 如果是多节点模式
+		if standalone then -- 如果是中心节点则启动 cmaster 服务
 			if not pcall(mtask.newservice,"cmaster") then
 				mtask.abort()
 			end
 		end
-
+		-- 如果是多节点模式，则 slave 服务为 cslave.lua
 		local ok, slave = pcall(mtask.newservice, "cslave")
 		if not ok then
 			mtask.abort()
 		end
 		mtask.name(".cslave", slave)
 	end
-
+	-- 如果是中心节点则启动 datacenterd 服务
 	if standalone then
 		local datacenter = mtask.newservice "datacenterd"
 		mtask.name("DATACENTER", datacenter)

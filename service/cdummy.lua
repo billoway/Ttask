@@ -35,6 +35,7 @@ function harbor.REGISTER(name, handle)
 	assert(globalname[name] == nil)
 	globalname[name] = handle
 	response_name(name)
+	--发送到harbor.so服务
 	mtask.redirect(harbor_service, handle, "harbor", 0, "N " .. name)
 end
 
