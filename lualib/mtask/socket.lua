@@ -55,6 +55,7 @@ socket_message[1] = function(id, size, data)
 	end
 
 	local sz = driver.push(s.buffer, buffer_pool, data, size)
+	-- 将接收到的数据放到buffer里面
 	local rr = s.read_required
 	local rrt = type(rr)
 	if rrt == "number" then
@@ -167,7 +168,8 @@ mtask.register_protocol {
 		socket_message[t](...)
 	end
 }
-
+-- 初始化 buffer，创建 socket_pool 对应的 id 结构
+-- 会阻塞，然后等相应的动作完成后才能返回
 local function connect(id, func)
 	local newbuffer
 	if func == nil then
@@ -175,12 +177,12 @@ local function connect(id, func)
 	end
 	local s = {
 		id = id,
-		buffer = newbuffer,
+		buffer = newbuffer,		-- 缓冲区(此socket库的实现原理是:远端发送消息过来，会收到数据，收到数据以后将数据全部储存在此buffer中，如果需要读取，则直接从此缓冲区中读取即可)
 		connected = false,
 		connecting = true,
 		read_required = false,
 		co = false,
-		callback = func,
+		callback = func,	-- 主动监听的一方如果被远端连接了，那么调用此函数(参数为 (已连接描述符 "远端ip:端口"))
 		protocol = "TCP",
 	}
 	assert(not socket_pool[id], "socket is not closed")
@@ -195,12 +197,13 @@ local function connect(id, func)
 		return nil, err
 	end
 end
--- 建立一个 TCP 连接。返回一个数字 id 。
+--  主动连接， 建立一个 TCP 连接。返回一个数字 id 。
 function socket.open(addr, port)
 	local id = driver.connect(addr,port)
+	-- 此函数在底层会向管道发送一个 'O' 的命令，管道的读端收到 'O' 后会调用 connect 函数主动与远端建立起连接
 	return connect(id)
 end
-
+-- 将操作系统的句柄交给底层的 epoll|kqueue 来管理，有数据来了也走 socket 那一套
 function socket.bind(os_fd)
 	local id = driver.bind(os_fd)
 	return connect(id)
@@ -224,6 +227,7 @@ end
 --框架 可以保证一次 write 调用的原子性。
 --即，如果你有多个服务同时向一个 socket id 写数据，每个写操作的串不会被分割开。
 
+-- 一般是主动监听的一端在调用 socket.listen 后调用此函数
 function socket.start(id, func)
 	driver.start(id)
 	return connect(id, func)
@@ -359,7 +363,7 @@ function socket.readline(id, sep)
 		return false, driver.readall(s.buffer, buffer_pool)
 	end
 end
---等待一个 socket 可读。
+--等待一个 socket 可读 (等待缓冲区区中有数据)
 function socket.block(id)
 	local s = socket_pool[id]
 	if not s or not s.connected then
@@ -378,12 +382,14 @@ socket.header = assert(driver.header)
 function socket.invalid(id)
 	return socket_pool[id] == nil
 end
---监听一个端口，返回一个 id ，供 start 使用。
+-- 监听一个地址与端口，等待远端连接过来，此函数一般与 socket.start(id, func) 配合使用
+-- 其中 socket.start 第一个参数为监听描述符，第二个参数为一个函数，函数的参数为:(已连接描述符 "远端地址:端口")
 function socket.listen(host, port, backlog)
 	if port == nil then
 		host, port = string.match(host, "([^:]+):(.+)$")
 		port = tonumber(port)
 	end
+	-- 此函数底层的动作为:给管道发送一个 'L' 命令，调用 bing listen 函数
 	return driver.listen(host, port, backlog)
 end
 
@@ -416,6 +422,7 @@ function socket.unlock(id)
 end
 --清除 socket id 在本服务内的数据结构，但并不关闭这个 socket 。
 --这可以用于你把 id 发送给其它服务，以转交 socket 的控制权。
+-- 此函数作用为:调用此 socket 库的服务不再接收此id发过来的socket消息，需要做的是要尽快在别的服务调用 socket.start 以便能接受到数据
 -- abandon use to forward socket id to other service
 -- you must call socket.start(id) later in other service
 function socket.abandon(id)
@@ -425,7 +432,7 @@ function socket.abandon(id)
 	end
 	socket_pool[id] = nil
 end
-
+-- 设置缓冲区的大小，如果不设置，则缓冲区大小应该是不做限制的
 function socket.limit(id, limit)
 	local s = assert(socket_pool[id])
 	s.buffer_limit = limit
