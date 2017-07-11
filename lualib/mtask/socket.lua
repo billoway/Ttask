@@ -3,6 +3,12 @@ local mtask = require "mtask"
 local mtask_core = require "mtask.core"
 local assert = assert
 
+--[[
+如果你需要一个网关帮你接入大量连接并转发它们到不同的地方处理。
+service/gate.lua 可以直接使用，同时也是用于了解  socket 模块如何工作的不错的参考。
+它还有一个功能近似的，但是全部用 C 编写的版本 service-src/mtask_service_gate.c 。
+]]
+
 local socket = {}	-- api
 local buffer_pool = {}	-- store all message buffer object
 local socket_pool = setmetatable( -- store all socket object
@@ -189,7 +195,7 @@ local function connect(id, func)
 		return nil, err
 	end
 end
-
+-- 建立一个 TCP 连接。返回一个数字 id 。
 function socket.open(addr, port)
 	local id = driver.connect(addr,port)
 	return connect(id)
@@ -203,6 +209,20 @@ end
 function socket.stdin()
 	return socket.bind(0)
 end
+--func 是一个函数。
+--每当一个监听的 id 对应的 socket 上有连接接入的时候，都会调用 func 函数。
+--这个函数会得到接入连接的 id 以及 ip 地址。你可以做后续操作。
+--每当 func 函数获得一个新的 socket id 后，并不会立即收到这个 socket 上的数据。
+--这是因为，我们有时会希望把这个 socket 的操作权转让给别的服务去处理。
+--socket 的 id 对于整个 mtask 节点都是公开的。
+--也就是说，你可以把 id 这个数字通过消息发送给其它服务，其他服务也可以去操作它。
+--任何一个服务只有在调用 socket.start(id) 之后，才可以收到这个 socket 上的数据。
+--框架是根据调用 start 这个 api 的位置来决定把对应 socket 上的数据转发到哪里去的。
+
+--向一个 socket id 写数据也需要先调用 start ，但写数据不限制在调用 start 的同一个服务中。
+--也就是说，你可以在一个服务中调用 start ，然后在另一个服务中向其写入数据。
+--框架 可以保证一次 write 调用的原子性。
+--即，如果你有多个服务同时向一个 socket id 写数据，每个写操作的串不会被分割开。
 
 function socket.start(id, func)
 	driver.start(id)
@@ -220,16 +240,18 @@ local function close_fd(id, func)
 		end
 	end
 end
-
+--强行关闭一个连接。和 close 不同的是，它不会等待可能存在的其它 coroutine 的读操作。
+--一般不建议使用这个 API ，但如果你需要在 __gc 元方法中关闭连接的话，shutdown 是一个比 close 更好的选择（因为在 gc 过程中无法切换 coroutine）。
 function socket.shutdown(id)
 	close_fd(id, driver.shutdown)
 end
-
+--在极其罕见的情况下，需要粗暴的直接关闭某个连接，而避免 socket.close 的阻塞等待流程，可以使用它。
 function socket.close_fd(id)
 	assert(socket_pool[id] == nil,"Use socket.close instead")
 	driver.close(id)
 end
-
+--关闭一个连接，这个 API 有可能阻塞住执行流。
+--因为如果有其它 coroutine 正在阻塞读这个 id 对应的连接，会先驱使读操作结束，close 操作才返回。
 function socket.close(id)
 	local s = socket_pool[id]
 	if s == nil then
@@ -254,7 +276,10 @@ function socket.close(id)
 	assert(s.lock == nil or next(s.lock) == nil)
 	socket_pool[id] = nil
 end
-
+--从一个 socket 上读 sz 指定的字节数。
+--如果读到了指定长度的字符串，它把这个字符串返回。
+--如果连接断开导致字节数不够，将返回一个 false 加上读到的字符串。
+--如果 sz 为 nil ，则返回尽可能多的字节数，但至少读一个字节（若无新数据，会阻塞）。
 function socket.read(id, sz)
 	local s = socket_pool[id]
 	assert(s)
@@ -297,7 +322,8 @@ function socket.read(id, sz)
 		return false, driver.readall(s.buffer, buffer_pool)
 	end
 end
-
+--从一个 socket 上读所有的数据，直到 socket 主动断开，
+--或在其它 coroutine 用 socket.close 关闭它。
 function socket.readall(id)
 	local s = socket_pool[id]
 	assert(s)
@@ -311,7 +337,8 @@ function socket.readall(id)
 	assert(s.connected == false)
 	return driver.readall(s.buffer, buffer_pool)
 end
-
+--从一个 socket 上读一行数据。sep 指行分割符。
+--默认的 sep 为 "\n"。读到的字符串是不包含这个分割符的。
 function socket.readline(id, sep)
 	sep = sep or "\n"
 	local s = socket_pool[id]
@@ -332,7 +359,7 @@ function socket.readline(id, sep)
 		return false, driver.readall(s.buffer, buffer_pool)
 	end
 end
-
+--等待一个 socket 可读。
 function socket.block(id)
 	local s = socket_pool[id]
 	if not s or not s.connected then
@@ -351,7 +378,7 @@ socket.header = assert(driver.header)
 function socket.invalid(id)
 	return socket_pool[id] == nil
 end
-
+--监听一个端口，返回一个 id ，供 start 使用。
 function socket.listen(host, port, backlog)
 	if port == nil then
 		host, port = string.match(host, "([^:]+):(.+)$")
@@ -387,7 +414,8 @@ function socket.unlock(id)
 		mtask.wakeup(co)
 	end
 end
-
+--清除 socket id 在本服务内的数据结构，但并不关闭这个 socket 。
+--这可以用于你把 id 发送给其它服务，以转交 socket 的控制权。
 -- abandon use to forward socket id to other service
 -- you must call socket.start(id) later in other service
 function socket.abandon(id)
@@ -403,7 +431,10 @@ function socket.limit(id, limit)
 	s.buffer_limit = limit
 end
 
----------------------- UDP
+---------------------- UDP ----------------------
+--udp 协议不需要阻塞读取。这是因为 udp 是不可靠协议，无法预期下一个读到的数据包是什么（协议允许乱序和丢包）。
+--udp 协议封装采用的是 callback 的方式。
+
 
 local function create_udp_object(id, cb)
 	assert(not socket_pool[id], "socket is not closed")
@@ -414,13 +445,32 @@ local function create_udp_object(id, cb)
 		callback = cb,
 	}
 end
+--这个 API 创建一个 udp handle ，并给它绑定一个 callback 函数。
+--当这个 handle 收到 udp 消息时，callback 函数将被触发。
+--[[
+socket.udp(function(str, from), address, port) : id
 
+第一个参数是一个 callback 函数，它会收到两个参数。str 是一个字符串即收到的包内容，from 是一个表示消息来源的字符串用于返回这条消息（见 socket.sendto）。
+第二个参数是一个字符串表示绑定的 ip 地址。如果你不写，默认为 ipv4 的 0.0.0.0 。
+第三个参数是一个数字， 表示绑定的端口。如果不写或传 0 ，这表示仅创建一个 udp handle （用于发送），但不绑定固定端口。
+这个函数会返回一个 handle id 。
+]]
 function socket.udp(callback, host, port)
 	local id = driver.udp(host, port)
 	create_udp_object(id, callback)
 	return id
 end
+--[[
+你可以给一个 udp handle 设置一个默认的发送目的地址。当你用 socket.udp 创建出一个非监听状态的 handle 时，
+设置目的地址非常有用。因为你很难有别的方法获得一个有效的供 socket.sendto 使用的地址串。
+这里 callback 是可选项，通常你应该在 socket.udp 创建出 handle 时就设置好 callback 函数。
+但有时，handle 并不是当前 service 创建而是由别处创建出来的。
+这种情况，你可以用 socket.start 重设 handle 的所有权，并用这个函数设置 callback 函数。
+设置完默认的目的地址后，之后你就可以用 socket.write 来发送数据包。
 
+注：handle 只能属于一个 service ，当一个 handle 归属一个 service 时，mtask 框架将对应的网络消息转发给它。
+向一个 handle 发送网络数据包则不需要当前 service 拥有这个 handle 。
+]]
 function socket.udp_connect(id, addr, port, callback)
 	local obj = socket_pool[id]
 	if obj then
@@ -433,10 +483,20 @@ function socket.udp_connect(id, addr, port, callback)
 	end
 	driver.udp_connect(id, addr, port)
 end
-
+--[[
+向一个网络地址发送一个数据包。
+第二个参数 from 即是一个网络地址，这是一个 string ，通常由 callback 函数生成
+，你无法自己构建一个地址串，但你可以把 callback 函数中得到的地址串保存起来以后使用。
+发送的内容是一个字符串 data 。
+]]
 socket.sendto = assert(driver.udp_send)
+--[[
+这个字符串可以用 下面API 转换为可读的 ip 地址和端口，用于记录。
+]]
 socket.udp_address = assert(driver.udp_address)
-
+--当 id 对应的 socket 上待发的数据超过 1M 字节后，系统将回调 callback 以示警告。
+--function callback(id, size) 回调函数接收两个参数 id 和 size ，size 的单位是 K 。
+--如果你不设回调，那么将每增加 64K 利用 mtask.error 写一行错误信息。
 function socket.warning(id, callback)
 	local obj = socket_pool[id]
 	assert(obj)

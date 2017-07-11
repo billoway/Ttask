@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local snax = require "snax"
+local snax = require "mtask.snax"
 
 mtask.start(function()
 	local ps = snax.newservice ("pingserver", "hello world")

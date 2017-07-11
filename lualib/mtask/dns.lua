@@ -88,7 +88,13 @@ local CACHE = {}
 
 local dns = {}
 local request_pool = {}
-
+--[[
+默认情况下，模块会根据 TTL 值 cache 查询结果。
+在查询超时的情况下，也可能返回之前的结果。
+dns.flush() 可以用来清空 cache 。
+注意：cache 保存在调用者的服务中，并非针对整个 mtask 进程。
+所以，推荐写一个独立的 dns 查询服务统一处理 dns 查询。
+]]
 function dns.flush()
 	CACHE[QTYPE.A] = setmetatable({},weak)
 	CACHE[QTYPE.AAAA] = setmetatable({},weak)
@@ -280,7 +286,8 @@ local function resolve(content)
 
 	mtask.wakeup(resp.co)
 end
-
+-- port 的默认值为 53 。
+-- 如果不填写 ip 的话，将从 /etc/resolv.conf 中找到合适的 ip 。
 function dns.server(server, port)
 	if not server then
 		local f = assert(io.open "/etc/resolv.conf")
@@ -339,7 +346,8 @@ local function suspend(tid, name, qtype)
 	end
 	return req.answers[1], req.answers
 end
-
+--查询 name 对应的 ip ，如果 ipv6 为 true 则查询 ipv6 地址，默认为 false 。
+--如果查询失败将抛出异常，成功则返回 ip ，以及一张包含有所有 ip 的 table 。
 function dns.resolve(name, ipv6)
 	local qtype = ipv6 and QTYPE.AAAA or QTYPE.A
 	local name = name:lower()

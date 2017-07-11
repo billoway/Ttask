@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local stm = require "stm"
+local stm = require "mtask.stm"
 
 local mode = ...
 

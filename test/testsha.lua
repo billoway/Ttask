@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local crypt = require "crypt"
+local crypt = require "mtask.crypt"
 
 local function sha1(text)
 	local c = crypt.sha1(text)

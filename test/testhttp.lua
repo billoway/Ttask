@@ -1,8 +1,8 @@
 local mtask = require "mtask"
 local httpc = require "http.httpc"
-local dns = require "dns"
+local dns = require "mtask.dns"
 
-mtask.start(function()
+local function main()
 	httpc.dns()	-- set dns server
 	httpc.timeout = 100	-- set timeout 1 second
 	print("GET baidu.com")
@@ -21,6 +21,9 @@ mtask.start(function()
 	print(string.format("GET %s (baidu.com)", ip))
 	local status, body = httpc.get("baidu.com", "/", respheader, { host = "baidu.com" })
 	print(status)
+end
 
+mtask.start(function()
+	print(pcall(main))
 	mtask.exit()
 end)

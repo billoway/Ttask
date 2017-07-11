@@ -1,6 +1,6 @@
 local mtask = require "mtask"
 local queue = require "mtask.queue"
-local snax = require "snax"
+local snax = require "mtask.snax"
 
 local i = 0
 local hello = "hello"

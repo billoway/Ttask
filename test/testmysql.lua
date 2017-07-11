@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local mysql = require "mysql"
+local mysql = require "mtask.db.mysql"
 
 local function dump(obj)
     local getIndent, quoteStr, wrapKey, wrapVal, dumpObj

@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local redis = require "redis"
+local redis = require "mtask.db.redis"
 
 local conf = {
 	host = "127.0.0.1",

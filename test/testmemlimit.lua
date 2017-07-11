@@ -1,6 +1,15 @@
 local mtask = require "mtask"
 
-local names = {"cluster", "dns", "mongo", "mysql", "redis", "sharedata", "socket", "sproto"}
+local names = {
+	"cluster",
+	"mtask.db.dns",
+	"mtask.db.mongo",
+	"mtask.db.mysql",
+	"mtask.db.redis",
+	"sharedata",
+	"mtask.socket",
+	"sproto"
+}
 
 -- set sandbox memory limit to 1M, must set here (at start, out of mtask.start)
 mtask.memlimit(1 * 1024 * 1024)

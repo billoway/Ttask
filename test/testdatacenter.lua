@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local datacenter = require "datacenter"
+local datacenter = require "mtask.datacenter"
 
 local function f1()
 	print("====1==== wait hello")

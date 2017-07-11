@@ -205,9 +205,10 @@ pop_lstring(lua_State *L, struct socket_buffer *sb, int sz, int skip) {
     }
     luaL_pushresult(&b);
 }
-
+// C API
 static int
-lheader(lua_State *L) {
+lheader(lua_State *L)
+{
     size_t len;
     const uint8_t * s = (const uint8_t *)luaL_checklstring(L, 1, &len);
     if (len > 4 || len < 1) {
@@ -231,7 +232,8 @@ lheader(lua_State *L) {
 	integer sz
  */
 static int
-lpopbuffer(lua_State *L) {
+lpopbuffer(lua_State *L)
+{
     struct socket_buffer * sb = lua_touserdata(L, 1);
     if (sb == NULL) {
         return luaL_error(L, "Need buffer object at param 1");
@@ -268,7 +270,8 @@ lclearbuffer(lua_State *L) {
 }
 
 static int
-lreadall(lua_State *L) {
+lreadall(lua_State *L)
+{
     struct socket_buffer * sb = lua_touserdata(L, 1);
     if (sb == NULL) {
         return luaL_error(L, "Need buffer object at param 1");
@@ -319,7 +322,8 @@ check_sep(struct buffer_node * node, int from, const char *sep, int seplen) {
 	string sep
  */
 static int
-lreadline(lua_State *L) {
+lreadline(lua_State *L)
+{
     struct socket_buffer * sb = lua_touserdata(L, 1);
     if (sb == NULL) {
         return luaL_error(L, "Need buffer object at param 1");
@@ -439,7 +443,8 @@ address_port(lua_State *L, char *tmp, const char * addr, int port_index, int *po
 }
 
 static int
-lconnect(lua_State *L) {
+lconnect(lua_State *L)
+{
     size_t sz = 0;
     const char * addr = luaL_checklstring(L,1,&sz);
     char tmp[sz];
@@ -456,7 +461,8 @@ lconnect(lua_State *L) {
 }
 
 static int
-lclose(lua_State *L) {
+lclose(lua_State *L)
+{
     int id = (int)luaL_checkinteger(L,1);
     struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
     mtask_socket_close(ctx, id);
@@ -464,15 +470,17 @@ lclose(lua_State *L) {
 }
 
 static int
-lshutdown(lua_State *L) {
+lshutdown(lua_State *L)
+{
     int id = (int)luaL_checkinteger(L,1);
     struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
     mtask_socket_shutdown(ctx, id);
     return 0;
 }
-
+// C API 监听一个端口，返回一个 id ，供 start 使用。
 static int
-llisten(lua_State *L) {
+llisten(lua_State *L)
+{
     const char * host = luaL_checkstring(L,1);
     int port = (int)luaL_checkinteger(L,2);
     int backlog = (int)luaL_optinteger(L,3,BACKLOG);
@@ -550,9 +558,11 @@ get_buffer(lua_State *L, int index, int *sz)
     }
     return buffer;
 }
-
+// C API  write 正常的写队列
+//把一个字符串置入正常的写队列 ,框架会在 socket 可写时发送它
 static int
-lsend(lua_State *L) {
+lsend(lua_State *L)
+{
     struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     int sz = 0;
@@ -561,9 +571,12 @@ lsend(lua_State *L) {
     lua_pushboolean(L, !err);
     return 1;
 }
-
+// C API low rate write 低优先级的写操作
+//把字符串写入低优先级队列。如果正常的写队列还有写操作未完成时，低优先级队列上的数据永远不会被发出。
+//只有在正常写队列为空时，才会处理低优先级队列。但是，每次写的字符串都可以看成原子操作。不会只发送一半，然后转去发送正常写队列的数据。
 static int
-lsendlow(lua_State *L) {
+lsendlow(lua_State *L)
+{
     struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     int sz = 0;
@@ -583,7 +596,8 @@ lbind(lua_State *L) {
 }
 
 static int
-lstart(lua_State *L) {
+lstart(lua_State *L)
+{
     struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     mtask_socket_start(ctx,id);
@@ -599,7 +613,8 @@ lnodelay(lua_State *L) {
 }
 
 static int
-ludp(lua_State *L) {
+ludp(lua_State *L)
+{
     struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
     size_t sz = 0;
     const char * addr = lua_tolstring(L,1,&sz);
@@ -619,7 +634,8 @@ ludp(lua_State *L) {
 }
 
 static int
-ludp_connect(lua_State *L) {
+ludp_connect(lua_State *L)
+{
     struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     size_t sz = 0;
@@ -639,7 +655,8 @@ ludp_connect(lua_State *L) {
 }
 
 static int
-ludp_send(lua_State *L) {
+ludp_send(lua_State *L)
+{
     struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     const char * address = luaL_checkstring(L, 2);
@@ -653,7 +670,8 @@ ludp_send(lua_State *L) {
 }
 
 static int
-ludp_address(lua_State *L) {
+ludp_address(lua_State *L)
+{
     size_t sz = 0;
     const uint8_t * addr = (const uint8_t *)luaL_checklstring(L, 1, &sz);
     uint16_t port = 0;

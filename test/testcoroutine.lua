@@ -1,7 +1,7 @@
 local mtask = require "mtask"
 -- You should use mtask.coroutine instead of origin coroutine in mtask
 local coroutine = require "mtask.coroutine"
-local profile = require "profile"
+local profile = require "mtask.profile"
 
 local function status(co)
 	repeat

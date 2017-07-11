@@ -1,6 +1,6 @@
 local mtask = require "mtask"
-local mc = require "multicast"
-local dc = require "datacenter"
+local mc = require "mtask.multicast"
+local dc = require "mtask.datacenter"
 
 local mode = ...
 

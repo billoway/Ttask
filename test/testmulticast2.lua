@@ -1,6 +1,6 @@
 local mtask = require "mtask"
-local dc = require "datacenter"
-local mc = require "multicast"
+local dc = require "mtask.datacenter"
+local mc = require "mtask.multicast"
 
 mtask.start(function()
 	print("remote start")

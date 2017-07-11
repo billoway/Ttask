@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local dns = require "dns"
+local dns = require "mtask.dns"
 
 mtask.start(function()
 	print("nameserver:", dns.server())	-- set nameserver

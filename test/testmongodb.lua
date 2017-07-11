@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local mongo = require "mongo"
+local mongo = require "mtask.db.mongo"
 local bson = require "bson"
 
 local host, db_name = ...
@@ -84,8 +84,8 @@ function test_expire_index()
 	assert(ret and ret.test_key == 1)
 
 	for i = 1, 1000 do
-		mtask.sleep(11);
-		
+		mtask.sleep(1);
+
 		local ret = db[db_name].testdb:findOne({test_key = 1})
 		if ret == nil then
 			return
@@ -96,10 +96,13 @@ function test_expire_index()
 end
 
 mtask.start(function()
+	print("Test insert without index")
 	test_insert_without_index()
+	print("Test insert index")
 	test_insert_with_index()
+	print("Test find and remove")
 	test_find_and_remove()
+	print("Test expire index")
 	test_expire_index()
-
 	print("mongodb test finish.");
 end)

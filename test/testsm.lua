@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-local sharemap = require "sharemap"
+local sharemap = require "mtask.sharemap"
 
 local mode = ...
 
