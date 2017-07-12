@@ -40,7 +40,7 @@ do -- begin mtaskco.resume
 		mtask_coroutines[co] = false
 		return unlock(co, mtask_resume(co, from, mtask_yield(from, ...)))
 	end
-
+	-- 如果resume的协程的状态是"BLOCKED"则将其父线程yield出来
 	local function resume(co, from, ok, ...)
 		if not ok then
 			return ok, ...
@@ -59,34 +59,34 @@ do -- begin mtaskco.resume
 	-- record the root of coroutine caller (It should be a mtask thread)
 	local coroutine_caller = setmetatable({} , { __mode = "kv" })
 
-function mtaskco.resume(co, ...)
-	local co_status = mtask_coroutines[co]
-	if not co_status then
-		if co_status == false then
-			-- is running
-			return false, "cannot resume a mtask coroutine suspend by mtask framework"
+	function mtaskco.resume(co, ...)
+		local co_status = mtask_coroutines[co]
+		if not co_status then
+			if co_status == false then
+				-- is running
+				return false, "cannot resume a mtask coroutine suspend by mtask framework"
+			end
+			if coroutine_status(co) == "dead" then
+				-- always return false, "cannot resume dead coroutine"
+				return coroutine_resume(co, ...)
+			else
+				return false, "cannot resume none mtask coroutine"
+			end
 		end
-		if coroutine_status(co) == "dead" then
-			-- always return false, "cannot resume dead coroutine"
-			return coroutine_resume(co, ...)
-		else
-			return false, "cannot resume none mtask coroutine"
-		end
+		local from = coroutine_running()
+		local caller = coroutine_caller[from] or from
+		coroutine_caller[co] = caller
+		return resume(co, caller, coroutine_resume(co, ...))
 	end
-	local from = coroutine_running()
-	local caller = coroutine_caller[from] or from
-	coroutine_caller[co] = caller
-	return resume(co, caller, coroutine_resume(co, ...))
-end
 
-function mtaskco.thread(co)
-	co = co or coroutine_running()
-	if mtask_coroutines[co] ~= nil then
-		return coroutine_caller[co] , false
-	else
-		return co, true
+	function mtaskco.thread(co)
+		co = co or coroutine_running()
+		if mtask_coroutines[co] ~= nil then
+			return coroutine_caller[co] , false
+		else
+			return co, true
+		end
 	end
-end
 
 end -- end of mtaskco.resume
 
@@ -117,14 +117,14 @@ do -- begin mtaskco.wrap
 		end
 	end
 
-function mtaskco.wrap(f)
-	local co = mtaskco.create(function(...)
-		return f(...)
-	end)
-	return function(...)
-		return wrap_co(mtaskco.resume(co, ...))
+	function mtaskco.wrap(f)
+		local co = mtaskco.create(function(...)
+			return f(...)
+		end)
+		return function(...)
+			return wrap_co(mtaskco.resume(co, ...))
+		end
 	end
-end
 
 end	-- end of mtaskco.wrap
 
