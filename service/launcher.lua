@@ -88,9 +88,9 @@ local function launch_service(service, ...)
 	end
 	return inst
 end
---为发送此消息的源地址 service一般为启动lua服务的中介 一般为 snlua
+-- _为发送此消息的源地址 service一般为启动lua服务的中介 (一般为 snlua)
 function command.LAUNCH(_, service, ...)
-	launch_service(service, ...)
+	launch_service(service, ...) -- service 为服务模块名，... 为创建服务时传递进去的参数
 	return NORET
 end
 

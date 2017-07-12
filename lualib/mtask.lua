@@ -652,7 +652,7 @@ end
 --目前推荐的惯例是，让你的服务响应一个启动消息。
 --在 newservice 之后，立刻调用 mtask.call 发送启动请求
 function mtask.newservice(name, ...)
-	-- launcher 就是 launcher.lua
+	-- .launcher 服务就是 launcher.lua
 	return mtask.call(".launcher", "lua" , "LAUNCH", "snlua", name, ...)
 end
 -- 启动唯一的一份Lua 服务 （全局唯一）.service 为 service_mgr

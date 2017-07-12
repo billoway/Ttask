@@ -149,8 +149,8 @@ main(int argc, char *argv[])
     int err =  luaL_loadbufferx(L, load_config, strlen(load_config), "=[mtask config]", "t");
 	assert(err == LUA_OK);
 	lua_pushstring(L, config_file);
-
-	err = lua_pcall(L, 1, 1, 0);//调用栈上的函数 参数格式1 返回值1 错误捕函数为空
+    //调用栈上的函数 参数格式1 返回值1 错误捕函数为空
+	err = lua_pcall(L, 1, 1, 0);
 	if (err) {
 		fprintf(stderr,"%s\n",lua_tostring(L,-1));
 		lua_close(L);

@@ -1,5 +1,5 @@
 thread = 8
-logger = nil
+logger = nil --"./log.txt"
 harbor = 0
 start = "main"
 bootstrap = "snlua bootstrap"	-- The service for bootstrap

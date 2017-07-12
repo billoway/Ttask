@@ -44,5 +44,5 @@ if LUA_PRELOAD then
 	f(table.unpack(args))
 	LUA_PRELOAD = nil
 end
-
+print("loader.lua  loadfile OK!")
 main(select(2, table.unpack(args)))

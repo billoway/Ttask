@@ -9,14 +9,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-//snlu.so
+// snlua.so
 // lua 服务生成器
 // lua服务的消息　先到 service_snlua，再分发到lua服务中
 // 每个lua服务其实　是一个service_snlua + 实际的lua服务　总和
-//mtask_start中调用bootstrap(ctx, config->bootstrap);
-//创建snlua服务模块，及ctx
-//参数为 snlua bootstrap
 
+//服务创建都是通过 mtask_context_new来进行的，mtask_context_new 必然会创建一个C模块(或者从已有C模块中找到已创建的模块)。
+// C服务的创建可以简单的说是加载这个模块，执行一些初始化工作，然后注册消息处理函数就完毕了。
+// lua服务的创建与 C 服务则有不同，它是通过snlua来创建的，每个lua服务的第一消息必然是发给自己的，
+// 而且这个消息的处理函数是 snlua 模块在执行 snlua_init 时注册的，当一个lua服务收到第一个消息时，
+// 是通过 loader.lua 来加载自己，并重新注册处理函数的。
+// 注:并不存在什么 snlua 服务，它只是创建lua服务的一个中间过程而已。
+
+// mtask_start中调用bootstrap(ctx, config->bootstrap) 是snlua 启动的第一个Lua 服务;
+// 创建snlua服务模块，及ctx 参数为 snlua bootstrap
 #define MEMORY_WARNING_REPORT (1024 * 1024 * 32)
 
 struct snlua {
@@ -89,12 +95,15 @@ _init_cb(struct snlua *l, struct mtask_context *ctx, const char * args, size_t s
     lua_State *L = l->L;
     l->ctx = ctx;
     lua_gc(L, LUA_GCSTOP, 0); //停止垃圾回收
-    lua_pushboolean(L, 1); //放个nil到栈上 /* signal for libraries to ignore env. vars. */
+    lua_pushboolean(L, 1); //放个nil到栈上
+    /* signal for libraries to ignore env. vars. */
     lua_setfield(L, LUA_REGISTRYINDEX, "LUA_NOENV");
     luaL_openlibs(L);
     lua_pushlightuserdata(L, ctx); //服务的ctx放到栈上
-    lua_setfield(L, LUA_REGISTRYINDEX, "mtask_context"); //_G[REGISTER_INDEX]["mtask_context"] = L[1] 将ctx放在注册表中
-    luaL_requiref(L, "mtask.codecache", codecache , 0); //package.load[mtask.codecache]没有的话则调用codecache[mtask.codecache]
+    //_G[REGISTER_INDEX]["mtask_context"] = L[1] 将ctx放在注册表中
+    lua_setfield(L, LUA_REGISTRYINDEX, "mtask_context");
+    //package.load[mtask.codecache]没有的话则调用codecache[mtask.codecache]
+    luaL_requiref(L, "mtask.codecache", codecache , 0);
     lua_pop(L,1);
     
     //设置环境变量 LUA_PATH  LUA_CPATH  LUA_SERVICE  LUA_PRELOAD
@@ -116,15 +125,16 @@ _init_cb(struct snlua *l, struct mtask_context *ctx, const char * args, size_t s
     assert(lua_gettop(L) == 1);
     
     const char * loader = optstring(ctx, "lualoader", "./lualib/loader.lua");
-    
-    int r = luaL_loadfile(L,loader); //加载loader.lua
+    //加载loader.lua(把 loader.lua 作为一个lua函数压到栈顶)
+    int r = luaL_loadfile(L,loader); //Lua stack + 1 = 2
     if (r != LUA_OK) {
         mtask_error(ctx, "Can't load %s : %s", loader, lua_tostring(L, -1));
         report_launcher_error(ctx);
         return 1;
     }
-    lua_pushlstring(L, args, sz);
-    r = lua_pcall(L,1,0,1);
+    lua_pushlstring(L, args, sz); //Lua stack + 1 = 3
+    // 调用 loader.lua 生成的代码块
+    r = lua_pcall(L,1,0,1);//[-(nargs + 1), +(nresults|1), Lua stack = 1
     if (r != LUA_OK) {
         mtask_error(ctx, "lua loader error : %s", lua_tostring(L, -1));
         report_launcher_error(ctx);
@@ -144,13 +154,15 @@ _init_cb(struct snlua *l, struct mtask_context *ctx, const char * args, size_t s
     
     return 0;
 }
-//snlua 服务受到消息时的处理
+//当worker线程调度到这个消息时便会执行
 static int
 _launch_cb(struct mtask_context * context, void *ud, int type, int session, uint32_t source , const void * msg, size_t sz)
 {
 	assert(type == 0 && session == 0);
 	struct snlua *l = ud;
-	mtask_callback(context, NULL, NULL);//初始服务的回调
+    // 将消息处理函数置空，以免别的消息发过来
+	mtask_callback(context, NULL, NULL);
+    // 消息处理:通过 loader.lua 加载 lua 代码块
 	int err = _init_cb(l, context, msg, sz);
 	if (err) {
 		mtask_command(context, "EXIT", NULL);
@@ -169,6 +181,7 @@ snlua_init(struct snlua *l, struct mtask_context *ctx, const char * args)
 	const char * self = mtask_command(ctx, "REG", NULL);//服务注册名字 “:handle”
 	uint32_t handle_id = (uint32_t)strtoul(self+1, NULL, 16);
 	// it must be first message 给他自己发送一个信息，目的地为刚注册的地址，最终将该消息push到对应的mq上
+    // 发消息给自己 以便加载相应的服务模块 tmp为 具体的 lua 服务脚本
 	mtask_send(ctx, 0, handle_id, PTYPE_TAG_DONTCOPY,0, tmp, sz);
 	return 0;
 }

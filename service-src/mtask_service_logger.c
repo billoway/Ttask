@@ -71,7 +71,8 @@ logger_init(struct logger * inst, struct mtask_context *ctx, const char *parm)
 	if (inst->handle) {
         //设置日志文件服务mtask_ctx的cb字段 即消息处理函数
 		mtask_callback(ctx, inst, logger_cb);
-        //给服务器注册一个名字,保存在H结构。.logger对用mtask_context.handle放在handle_storage(H)中
+        //给服务器注册一个名字,保存在H结构。
+        //.logger对用mtask_context.handle放在handle_storage(H)中
 		mtask_command(ctx, "REG", ".logger");
 		return 0;
 	}

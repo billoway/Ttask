@@ -154,7 +154,7 @@ mtask_context_new(const char * name, const char *param)
 	CHECKCALLING_INIT(ctx)
     //填充结构 模块 实例 引用计数
 	ctx->mod = mod;
-	ctx->instance = inst;
+	ctx->instance = inst;//动态库特有的结构体指针
 	ctx->ref = 2;
 	ctx->cb = NULL;
 	ctx->cb_ud = NULL;
@@ -170,9 +170,9 @@ mtask_context_new(const char * name, const char *param)
     ctx->profile = G_NODE.profile;
 	// Should set to 0 first to avoid mtask_handle_retireall get an uninitialized handle
 	ctx->handle = 0;
-    //注册ctx,将 ctx 存到 handle_storage (M)哈希表中，并得到一个handle
+    //注册ctx,将 ctx 存到 handle_storage (M)哈希表中，并得到一个handle,得到服务的地址
 	ctx->handle = mtask_handle_register(ctx);
-    //创建mtask_context中的消息队列 服务句柄会放在消息队列中
+    //创建服务（mtask_context中）的消息队列 ，服务句柄会放在消息队列中
 	struct message_queue * queue = ctx->queue = mtask_mq_create(ctx->handle);
 	// init function maybe use ctx->handle, so it must init at last
 	context_inc();
@@ -185,7 +185,7 @@ mtask_context_new(const char * name, const char *param)
 		if (ret) {
 			ctx->init = true;// 实例化 '_init' 成功
 		}
-		mtask_globalmq_push(queue);// 强行压入消息队列
+		mtask_globalmq_push(queue);// 将服务的消息队列放入全局的消息队列尾
 		if (ret) {
 			mtask_error(ret, "LAUNCH %s %s", name, param ? param : "");
 		}
@@ -531,6 +531,7 @@ cmd_kill(struct mtask_context * context, const char * param)
 static const char *
 cmd_launch(struct mtask_context * context, const char * param)
 {
+    // param为一串字符串(服务名和参数组成，以空格分开)
 	size_t sz = strlen(param);
 	char tmp[sz+1];
 	strcpy(tmp,param);

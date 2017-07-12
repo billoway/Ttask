@@ -246,6 +246,7 @@ bootstrap(struct mtask_context * logger, const char * cmdline)
 	char name[sz+1];
 	char args[sz+1];
 	sscanf(cmdline, "%s %s", name, args);
+    // name为 "snlua" args为 "bootstrap"
 	struct mtask_context *ctx = mtask_context_new(name, args);
 	if (ctx == NULL) {
 		mtask_error(NULL, "Bootstrap error : %s\n", cmdline);

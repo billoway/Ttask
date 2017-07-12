@@ -6,7 +6,7 @@ local c = require "mtask.core"
 --服务的地址是区分运行时不同服务的唯一标识。
 --如果你想编写一个服务，在系统中只存在一份，UniqueService 
 function mtask.launch(...)
-	local addr = c.command("LAUNCH", table.concat({...}," "))
+	local addr = c.command("LAUNCH", table.concat({...}," "))-- 调用 lualib-src 下的 lua-mtask 模块
 	if addr then
 		return tonumber("0x" .. string.sub(addr , 2))
 	end
