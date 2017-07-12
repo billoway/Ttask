@@ -28,6 +28,7 @@ local socket = require "mtask.socket"
 local slave_node = {}
 local global_name = {}
 
+-- 接受从网络过来的序列化后的包并将其反序列化后返回
 local function read_package(fd)
 	local sz = socket.read(fd, 1)
 	assert(sz, "closed")
@@ -35,26 +36,30 @@ local function read_package(fd)
 	local content = assert(socket.read(fd, sz), "closed")
 	return mtask.unpack(content)
 end
-
+-- 将序列化后的包发出去
 local function pack_package(...)
 	local message = mtask.packstring(...)
 	local size = #message
 	assert(size <= 255 , "too long")
 	return string.char(size) .. message
 end
-
+-- 当有新slave连接上来时，返回一个确认包告诉这个slave说:你已经连接到master了。
+-- 并且通知其它slave说有哪个新slave已经连接上来了
 local function report_slave(fd, slave_id, slave_addr)
 	local message = pack_package("C", slave_id, slave_addr)
 	local n = 0
 	for k,v in pairs(slave_node) do
 		if v.fd ~= 0 then
+			-- 依次告诉老slave节点，有新节点已经连接上来了
 			socket.write(v.fd, message)
 			n = n + 1
 		end
 	end
+	-- 告诉老节点 新连接上来的 slave，有多少个 slave 已经连接了
 	socket.write(fd, pack_package("W", n))
 end
-
+-- 在中心节点记录下这个slave，并通知其他slave说这个slave连接上来了，
+-- 让别的slave都去连接这个新的slave
 local function handshake(fd)
 	local t, slave_id, slave_addr = read_package(fd)
 	assert(t=='H', "Invalid handshake type " .. t)
@@ -70,10 +75,10 @@ local function handshake(fd)
 	}
 	return slave_id , slave_addr
 end
-
+-- 主要是取 slave 发过来的请求，然后进行相应的处理并回应(如果需要回应的话)
 local function dispatch_slave(fd)
 	local t, name, address = read_package(fd)
-	if t == 'R' then
+	if t == 'R' then -- 注册全局名字
 		-- register name
 		assert(type(address)=="number", "Invalid request")
 		if not global_name[name] then
@@ -81,7 +86,7 @@ local function dispatch_slave(fd)
 		end
 		local message = pack_package("N", name, address)
 		for k,v in pairs(slave_node) do
-			socket.write(v.fd, message)
+			socket.write(v.fd, message) -- 向所有的 slave 节点广播 'N' 命令
 		end
 	elseif t == 'Q' then
 		-- query name
@@ -93,10 +98,11 @@ local function dispatch_slave(fd)
 		mtask.error("Invalid slave message type " .. t)
 	end
 end
-
+-- 监控 slave 的协程，其实就是对处理 slave 发过来的消息
 local function monitor_slave(slave_id, slave_address)
 	local fd = slave_node[slave_id].fd
 	mtask.error(string.format("Harbor %d (fd=%d) report %s", slave_id, fd, slave_address))
+	-- 调用 dispatch_slave 收取 slave 发过来的网络包
 	while pcall(dispatch_slave, fd) do end
 	mtask.error("slave " ..slave_id .. " is down")
 	local message = pack_package("D", slave_id)
@@ -109,14 +115,20 @@ end
 
 mtask.start(function()
 	print("cmaster.lua start calling")
-	local master_addr = mtask.getenv "standalone"
+	local master_addr = mtask.getenv "standalone"-- 得到中心节点的地址
 	mtask.error("master listen socket " .. tostring(master_addr))
-	local fd = socket.listen(master_addr)
+	local fd = socket.listen(master_addr)-- 监听中心节点
+	-- 调用 socket.start 正式开始监听
 	socket.start(fd , function(id, addr)
+		-- 如果有远端连接过来，会调用此函数，这里是有 slave 连接过来了会调用此函数
 		mtask.error("connect from " .. addr .. " " .. id)
+		-- 启动数据传输
 		socket.start(id)
+		-- 调用 handshake 在中心节点记录下这个 slave，并通知其他slave说这个slave连接上来了，
+		-- 让别的slave都去连接这个新的slave)
 		local ok, slave, slave_addr = pcall(handshake, id)
 		if ok then
+			-- 监控 slave 的协程，其实就是对处理 slave 发过来的消息
 			mtask.fork(monitor_slave, slave, slave_addr)
 		else
 			mtask.error(string.format("disconnect fd = %d, error = %s", id, slave))

@@ -4,7 +4,7 @@ local snax = require "mtask.snax"
 
 local cmd = {}
 local service = {}
-
+-- 这里的 func 为 mtask.newservice
 local function request(name, func, ...)
 	local ok, handle = pcall(func, ...)
 	local s = service[name]
@@ -14,7 +14,7 @@ local function request(name, func, ...)
 	else
 		service[name] = tostring(handle)
 	end
-
+	-- 唤醒阻塞的协程
 	for _,v in ipairs(s) do
 		mtask.wakeup(v)
 	end
@@ -25,9 +25,11 @@ local function request(name, func, ...)
 		error(tostring(handle))
 	end
 end
-
+-- 惰性初始化
+-- 如果是首次调用会直接返回
 local function waitfor(name , func, ...)
 	local s = service[name]
+	-- 如果已经有了，就直接返回
 	if type(s) == "number" then
 		return s
 	end
@@ -42,12 +44,12 @@ local function waitfor(name , func, ...)
 
 	assert(type(s) == "table")
 
-	if not s.launch and func then
+	if not s.launch and func then-- 如果是首次调用,可以直接返回
 		s.launch = true
 		return request(name, func, ...)
 	end
 
-	table.insert(s, co)
+	table.insert(s, co)	-- 后续的调用都需要阻塞在这里
 	mtask.wait()
 	s = service[name]
 	if type(s) == "string" then
@@ -58,7 +60,7 @@ local function waitfor(name , func, ...)
 end
 
 local function read_name(service_name)
-	if string.byte(service_name) == 64 then -- '@'
+	if string.byte(service_name) == 64 then -- 64的ASCII码为 '@'
 		return string.sub(service_name , 2)
 	else
 		return service_name
@@ -102,7 +104,7 @@ local function list_service()
 	return result
 end
 
-
+-- 单节点模式、多节点中的主节点
 local function register_global()
 	function cmd.GLAUNCH(name, ...)
 		local global_name = "@" .. name
@@ -140,7 +142,7 @@ local function register_global()
 		return result
 	end
 end
-
+-- 多节点中的非主节点
 local function register_local()
 	local function waitfor_remote(cmd, name, ...)
 		local global_name = "@" .. name
@@ -150,6 +152,7 @@ local function register_local()
 		else
 			local_name = global_name
 		end
+		-- 注意此时的 func变为 mtask.call 了， cmd为 "LAUNCH"
 		return waitfor(local_name, mtask.call, "SERVICE", "lua", cmd, global_name, ...)
 	end
 
@@ -185,17 +188,17 @@ mtask.start(function()
 			mtask.ret(mtask.pack(nil, r))
 		end
 	end)
-	local handle = mtask.localname ".service"
+	local handle = mtask.localname ".service"--返回"service"的数字地址
 	if  handle then
 		mtask.error(".service is already register by ", mtask.address(handle))
 		mtask.exit()
 	else
 		mtask.register(".service")
 	end
-	if mtask.getenv "standalone" then
+	if mtask.getenv "standalone" then -- 主节点,单节点模式
 		mtask.register("SERVICE")
 		register_global()
 	else
-		register_local()
+		register_local() -- 多节点模式中的非主节点
 	end
 end)
