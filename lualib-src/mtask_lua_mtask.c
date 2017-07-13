@@ -30,7 +30,7 @@ traceback (lua_State *L)
 		lua_pushliteral(L, "(no error message)");
 	return 1;
 }
-
+// 消息不转发
 static int
 _cb(struct mtask_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
 {
@@ -51,7 +51,7 @@ _cb(struct mtask_context * context, void * ud, int type, int session, uint32_t s
 	lua_pushinteger(L,sz);
 	lua_pushinteger(L, session);
 	lua_pushinteger(L, source);
-
+    //调用 mtask.dispatch_message 的第二个参数来处理别的服务发过来的消息
 	r = lua_pcall(L, 5, 0 , trace);
 
 	if (r == LUA_OK) {
@@ -77,7 +77,8 @@ _cb(struct mtask_context * context, void * ud, int type, int session, uint32_t s
 
 	return 0;
 }
-
+// 在代理模式中让 ctx->cb 返回1，即不执行销毁 msg 的动作，因为此消息还要转发的。
+// 让转发的目的服务去销毁这个内存
 static int
 forward_cb(struct mtask_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
 {
@@ -86,6 +87,7 @@ forward_cb(struct mtask_context * context, void * ud, int type, int session, uin
 	return 1;
 }
 //设置mtask_context总的cb和cb_ud 分别为_cb何lua_state 同时记录lua_function到注册表中
+//主要用来注册lua服务的消息处理函数
 static int
 lcallback(lua_State *L)
 {
@@ -196,8 +198,8 @@ send_message(lua_State *L, int source, int idx_type)
     //如果给定索引处的值是一个完全用户数据,函数返回其内存块的地址.
     //如果值是一个轻量用户数据,那么就返回它表示的指针.
     struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
-    //获取目的地址 string 或者 number
-    uint32_t dest = (uint32_t)lua_tointeger(L, 1); //目的地址
+    //获取目的服务地址 string 或者 number
+    uint32_t dest = (uint32_t)lua_tointeger(L, 1);
     const char * dest_string = NULL;
     if (dest == 0) {
         if (lua_type(L,1) == LUA_TNUMBER) {
@@ -205,27 +207,30 @@ send_message(lua_State *L, int source, int idx_type)
         }
         dest_string = get_dest_string(L, 1);
     }
-    //消息类型
+    //得到消息类型
     int type = (int)luaL_checkinteger(L, idx_type+0);
-    //session
+    //得到会话id
     int session = 0;
     if (lua_isnil(L,idx_type+1)) {
         type |= PTYPE_TAG_ALLOCSESSION;
     } else {
         session = (int)luaL_checkinteger(L,idx_type+1);
     }
+    //得到传递的参数类型
     //消息数据是字符串或者内存数据 string 和 lightuserdata
     int mtype = lua_type(L,idx_type+2);
     switch (mtype) {
-        case LUA_TSTRING: {//字符串数据
+        case LUA_TSTRING: {//如果参数类型是字符串
             size_t len = 0;
+            //得到传递的消息的字符串
             void * msg = (void *)lua_tolstring(L,idx_type+2,&len);
             if (len == 0) {
                 msg = NULL;
             }
+            //如果是字符串地址 mtask_sendname 最终还是会调用 mtask_send
             if (dest_string) {
                 session = mtask_sendname(context, source, dest_string, type, session , msg, len);
-            } else {
+            } else { //如果是数字地址，直接调用 mtask_send
                 session = mtask_send(context, source, dest, type, session , msg, len);
             }
             break;

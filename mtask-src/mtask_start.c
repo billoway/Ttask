@@ -97,6 +97,7 @@ free_monitor(struct monitor *m)
 	mtask_free(m);   //释放监视结构
 }
 //监视线程 用于监控是否有消息没有即时处理
+//每5秒进行一次检查，看是不是有服务陷入endless
 static void *
 thread_monitor(void *p)
 {
@@ -156,7 +157,9 @@ thread_timer(void *p)
 	pthread_mutex_unlock(&m->mutex);
 	return NULL;
 }
-//工作线程
+// 工作线程的作用是从全局的消息队列中取出单个服务的消息队列，再从服务的消息队列中取出消息，
+// 然后调用消息的回调函数来处理收到的消息
+
 static void *
 thread_worker(void *p)
 {
@@ -168,7 +171,8 @@ thread_worker(void *p)
 	mtask_initthread(THREAD_WORKER);
 	struct message_queue * q = NULL;
 	while (!m->quit) {
-		q = mtask_context_message_dispatch(sm, q, weight);//消息调度执行（取出消息 执行服务中的回调函数）
+        //消息调度执行（取出消息 执行服务中的回调函数）每个服务都有一个权重
+		q = mtask_context_message_dispatch(sm, q, weight);
 		if (q == NULL) {
 			if (pthread_mutex_lock(&m->mutex) == 0) {
 				++ m->sleep;//进入睡眠
@@ -190,7 +194,8 @@ thread_worker(void *p)
 static void
 start(int thread)
 {
-    pthread_t pid[thread+3]; // 线程数+3 3个线程分别用于 _monitor _timer  _socket 监控 定时器 socket IO
+    // 线程数+3 3个线程分别用于 monitor|timer|socket 监控 定时器 socket IO
+    pthread_t pid[thread+3];
     
 	struct monitor *m = mtask_malloc(sizeof(*m));
 	memset(m, 0, sizeof(*m));
@@ -210,12 +215,15 @@ start(int thread)
 		fprintf(stderr, "Init cond error");
 		exit(1);
 	}
-
+     //启动线程
 	create_thread(&pid[0], thread_monitor, m);
 	create_thread(&pid[1], thread_timer, m);
 	create_thread(&pid[2], thread_socket, m);
-
-	static int weight[] = { 
+    //每个服务都有一个权重
+    //权重为-1为只处理一条消息
+    //权重为0就将此服务的所有消息处理完
+    //权重大于1就处理服务的部分消息
+	static int weight[] = {
 		-1, -1, -1, -1, 0, 0, 0, 0,
 		1, 1, 1, 1, 1, 1, 1, 1, 
 		2, 2, 2, 2, 2, 2, 2, 2, 
@@ -229,6 +237,7 @@ start(int thread)
 		} else {
 			wp[i].weight = 0;
 		}
+        //启动多个线程: thread_worker
 		create_thread(&pid[i+3], thread_worker, &wp[i]);
 	}
 
@@ -249,7 +258,9 @@ bootstrap(struct mtask_context * logger, const char * cmdline)
     // name为 "snlua" args为 "bootstrap"
 	struct mtask_context *ctx = mtask_context_new(name, args);
 	if (ctx == NULL) {
+        //mtask_error的本质是向logger服务发送消息，第一个参数是服务结构体
 		mtask_error(NULL, "Bootstrap error : %s\n", cmdline);
+        //取出logger服务的所有消息进行处理
 		mtask_context_dispatchall(logger);
 		exit(1);
 	}
@@ -264,29 +275,29 @@ mtask_start(struct mtask_config * config)
     sa.sa_flags = SA_RESTART;
     sigfillset(&sa.sa_mask);
     sigaction(SIGHUP, &sa, NULL);
-    
+    //后台执行
 	if (config->daemon) {
-		if (daemon_init(config->daemon)) {//后台执行
+		if (daemon_init(config->daemon)) {
 			exit(1);
 		}
 	}
-	mtask_harbor_init(config->harbor);//初始化节点 编号
-	mtask_handle_init(config->harbor);//初始化句柄 编号和mtask_context 初始化一个 handle 就是初始化 handle_storage H
+	mtask_harbor_init(config->harbor);//初始化节点编号,用来后续判断是否为非本节点的服务地址
+	mtask_handle_init(config->harbor);//初始化句柄编号和mtask_context 初始化一个 handle 就是初始化 handle_storage H
 	mtask_mq_init();                       //初始化全局队列 Q
-	mtask_module_init(config->module_path);//初始化模块管理
+	mtask_module_init(config->module_path);//初始化模块管理，module_path 为C服务的路径
 	mtask_timer_init();                    //初始化定时器
 	mtask_socket_init();                   //初始化SOCKET_SERVER
     mtask_profile_enable(config->profile);
-
+    //创建第一个服务（C 服务:logger(由于错误消息都是从logger服务写到相应的文件，所以需要先启动logger服务)
 	struct mtask_context *ctx = mtask_context_new(config->logservice, config->logger);
 	if (ctx == NULL) {
 		fprintf(stderr, "Can't launch %s service\n", config->logservice);
 		exit(1);
 	}
-
-	bootstrap(ctx, config->bootstrap);//启动初始服务
-
-	start(config->thread);      //开启各种线程
+    // 加载 snlua 模块(第二个C 服务)，并启动（snlua 服务启动） bootstrap 服务（第一个 Lua 服务）
+	bootstrap(ctx, config->bootstrap);
+    //初始化工作基本完成，开启各种线程
+	start(config->thread);
 
 	// harbor_exit may call socket send, so it should exit before socket_free
 	mtask_harbor_exit();        //节点管理服务退出

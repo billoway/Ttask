@@ -17,6 +17,7 @@ end
 mtask.start(function()
 	print("simpledb.lua start calling")
 	mtask.dispatch("lua", function(session, address, cmd, ...)
+		mtask.error("cmd=>"..cmd)
 		cmd = cmd:upper()
 		if cmd == "PING" then
 			assert(session == 0)

@@ -6,7 +6,7 @@ mtask.start(function()
 
 	mtask.call(gate, "lua", "open" , {
 		port = 8888,
-		maxclient = 64,
+		maxclient = 1,
 		servername = "sample",
 	})
 end)

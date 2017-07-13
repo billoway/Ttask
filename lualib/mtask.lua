@@ -528,7 +528,8 @@ end
 --每条消息的处理都工作在一个独立的 coroutine 中，看起来以多线程方式工作。
 --但记住，在同一个 lua 虚拟机（同一个 lua 服务）中，永远不可能出现多线程并发的情况
 
--- 将func赋值给p.dispatch， 这里的func就是真正的消息处理函数
+-- 将func赋值给proto[typename].dispatch， 这里的func就是真正的消息处理函数
+-- func = function(session, source, cmd, subcmd, ...)
 function mtask.dispatch(typename, func)
 	local p = proto[typename]
 	if func then  --lua类型的消息一般走这里

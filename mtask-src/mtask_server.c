@@ -332,9 +332,9 @@ mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q
 		if (q==NULL)
 			return NULL;
 	}
-
-	uint32_t handle = mtask_mq_handle(q);//得到消息队列所属的服务句柄
-
+    //得到消息队列所属的服务句柄(服务的地址)
+	uint32_t handle = mtask_mq_handle(q);
+    //得到服务的结构体
 	struct mtask_context * ctx = mtask_handle_grab(handle);
 	if (ctx == NULL) {
 		struct drop_t d = { handle };
@@ -353,6 +353,7 @@ mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q
 			n = mtask_mq_length(q);//获取消息的长度
 			n >>= weight;
 		}
+        //判断是否过载了
 		int overload = mtask_mq_overload(q);
 		if (overload) {
 			mtask_error(ctx, "May overload, message queue length = %d", overload);
@@ -794,13 +795,13 @@ mtask_send(struct mtask_context * context, uint32_t source, uint32_t destination
 		rmsg->message = data;
 		rmsg->sz = sz;
 		mtask_harbor_send(rmsg, source, session);//将消息发送到harbar 有barbor发送到其他远程节点
-	} else {
+	} else { //如果目的地址是本地节点的
 		struct mtask_message smsg;//本机消息直接压入对应的消息队列
 		smsg.source = source;
 		smsg.session = session;
 		smsg.data = data;
 		smsg.sz = sz;
-        //消息压入目的服务的消息队列
+        //将消息压入到目的地址服务的消息队列中供work线程取出
 		if (mtask_context_push(destination, &smsg)) {
 			mtask_free(data);
 			return -1;

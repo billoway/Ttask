@@ -39,6 +39,7 @@ function CMD.afk(source)
 end
 
 mtask.start(function()
+	print("msgagent.lua  start calling")
 	-- If you want to fork a work thread , you MUST do it in CMD.login
 	mtask.dispatch("lua", function(session, source, command, ...)
 		local f = assert(CMD[command])

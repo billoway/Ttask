@@ -1,7 +1,7 @@
 local mtask = require "mtask"
 local sprotoloader = require "sprotoloader"
 
-local max_client = 64
+local max_client = 1
 
 mtask.start(function()
 	print("\n**************************************************")
