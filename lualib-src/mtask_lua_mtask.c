@@ -253,7 +253,7 @@ send_message(lua_State *L, int source, int idx_type)
         // todo: maybe throw an error would be better
         return 0;
     }
-    lua_pushinteger(L,session);//seeeion号入栈 也就是返回session
+    lua_pushinteger(L,session);//session号入栈 也就是返回session
     return 1;//返回值的个数（入栈个数）
 }
 /*

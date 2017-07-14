@@ -100,6 +100,9 @@ end
 
 send_request("handshake")
 send_request("set", { what = "hello", value = "world" })
+send_request("set", { what = "t1", value = "v1" })
+send_request("set", { what = "t2", value = "v2" })
+send_request("set", { what = "t3", value = "v3" })
 while true do
 	dispatch_package()
 	local cmd = socket.readstdin()

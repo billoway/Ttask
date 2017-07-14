@@ -93,6 +93,7 @@ end
 mtask.start(function()
 	print("agent.lua  start calling")
 	mtask.dispatch("lua", function(_,_, command, ...)
+		mtask.error("command==>"..command)
 		local f = CMD[command]
 		mtask.ret(mtask.pack(f(...)))
 	end)

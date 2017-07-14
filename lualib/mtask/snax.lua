@@ -1,3 +1,4 @@
+--snax 是一个方便 mtask 服务实现的简单框架。（简单是相对于 mtask 的 api 而言）
 local mtask = require "mtask"
 local snax_interface = require "snax.interface"
 

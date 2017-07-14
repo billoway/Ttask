@@ -14,11 +14,11 @@
 #define PTYPE_HARBOR 5       //远程消息
 #define PTYPE_SOCKET 6       //socket消息
 // read lualib/mtask.lua examples/simplemonitor.lua
-#define PTYPE_ERROR 7
+#define PTYPE_ERROR 7        //错误
 // read lualib/mtask.lua lualib/mqueue.lua lualib/snax.lua
 #define PTYPE_RESERVED_QUEUE 8
-#define PTYPE_RESERVED_DEBUG 9
-#define PTYPE_RESERVED_LUA 10
+#define PTYPE_RESERVED_DEBUG 9 //调试消息
+#define PTYPE_RESERVED_LUA 10 //Lua 消息
 #define PTYPE_RESERVED_SNAX 11
 
 #define PTYPE_TAG_DONTCOPY 0x10000
@@ -36,6 +36,7 @@ uint32_t mtask_queryname(struct mtask_context * context, const char * name);
  服务之间消息发送API
 
  @param context   C 基础对象
+ 
  @param source    消息源，每个服务都由一个 32bit 整数标识。这个整数可以看成是服务在 mtask 系统中的地址。
      即使在服务退出后，新启动的服务通常也不会使用已用过的地址（除非发生回绕，但一般间隔时间非常长）。
      每条收到的消息都携带有 source ，方便在回应的时候可以指定地址。但地址的管理通常由框架完成，用户不用关心。

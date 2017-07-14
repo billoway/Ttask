@@ -28,6 +28,7 @@ function gateserver.closeclient(fd)
 end
 
 function gateserver.start(handler)
+	print("gateserver.start calling")
 	assert(handler.message)
 	assert(handler.connect)
 
@@ -143,8 +144,11 @@ function gateserver.start(handler)
 	}
 
 	mtask.start(function()
+		print("gateserver.lua  start calling")
 		mtask.dispatch("lua", function (_, address, cmd, ...)
+			print("gateserver.lua ".."cmd==>"..cmd.."  address==>"..string.format("[%x]",address))
 			local f = CMD[cmd]
+			print(f)
 			if f then
 				mtask.ret(mtask.pack(f(address, ...)))
 			else

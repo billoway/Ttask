@@ -5,10 +5,12 @@ local db = {}
 local command = {}
 
 function command.GET(key)
+	print("watchdog.lua command.GET".." key=>"..key)
 	return db[key]
 end
 
 function command.SET(key, value)
+	print("watchdog.lua command.SET".." key=>"..key.." value=>"..value)
 	local last = db[key]
 	db[key] = value
 	return last
@@ -17,7 +19,7 @@ end
 mtask.start(function()
 	print("simpledb.lua start calling")
 	mtask.dispatch("lua", function(session, address, cmd, ...)
-		mtask.error("cmd=>"..cmd)
+		print("watchdog.lua ".."cmd==>"..cmd.."  session==>"..session.."  address==>"..string.format("[%x]",address))
 		cmd = cmd:upper()
 		if cmd == "PING" then
 			assert(session == 0)
