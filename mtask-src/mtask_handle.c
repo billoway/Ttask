@@ -24,18 +24,18 @@ struct handle_name {
 struct handle_storage {
 	struct rwlock lock; //读写锁
 
-	uint32_t harbor;    //服务所属harbor  harbor用于不同主机间通信
-	uint32_t handle_index;//初始值为1，表示handle句柄起始值从1开始
-	int slot_size;       //hash 表空间大小，初始为DEFAULT_SLOT_SIZE
-	struct mtask_context ** slot;//mtask_context 表空间
-	
-	int name_cap;   //handle_name容量，初始为2，这里 name_cap 与 slot_size 不一样的原因在于，不是每个 handle 都有name
-	int name_count;  //handle_name数量
-	struct handle_name *name;//handle_name表
+	uint32_t harbor;    //服务所属harbor id; harbor用于不同主机间通信
+	uint32_t handle_index;//服务索引
+	int slot_size;       //slot的个数，slot_size永远不会小于handle_index
+	struct mtask_context ** slot;//slot下挂着所有的服务相关的结构体
+    //handle_name容量，初始为2，这里 name_cap 与 slot_size 不一样的原因在于，不是每个 handle 都有name
+	int name_cap;//存储全局名字的空间的总个数，永远大于name_count
+	int name_count;  //当前全局名字的个数
+	struct handle_name *name;//用于管理服务的全局名字
 };
 
 static struct handle_storage *H = NULL;
-// 注册ctx，将 ctx 存到 handle_storage 哈希表中，并得到一个handle
+// 注册ctx，将 ctx 存到 handle_storage 哈希表中 的 slot，并得到一个handle
 uint32_t
 mtask_handle_register(struct mtask_context *ctx)
 {
@@ -46,8 +46,9 @@ mtask_handle_register(struct mtask_context *ctx)
 	for (;;) {
 		int i;
 		for (i=0;i<s->slot_size;i++) {
-			uint32_t handle = (i+s->handle_index) & HANDLE_MASK;
-			int hash = handle & (s->slot_size-1); // 等价于 handle % s->slot_size
+            uint32_t handle = (i+s->handle_index) & HANDLE_MASK;//将高八位置为0
+            //从1开始增长，到0终止，如果hash为0了，说明slot_size已经用尽了
+            int hash = handle & (s->slot_size-1); // 等价于 handle % s->slot_size
 			if (s->slot[hash] == NULL) {// 找到未使用的  slot 将这个 ctx 放入这个 slot 中
 				s->slot[hash] = ctx;
 				s->handle_index = handle + 1;// 移动 handle_index 方便下次使用
@@ -58,7 +59,8 @@ mtask_handle_register(struct mtask_context *ctx)
 				return handle;
 			}
 		}
-		assert((s->slot_size*2 - 1) <= HANDLE_MASK);// 确保 扩大2倍空间后 总共handle即 slot的数量不超过 24位的限制
+        // 确保 扩大2倍空间后 总共handle即 slot的数量不超过 24位的限制
+        assert((s->slot_size*2 - 1) <= HANDLE_MASK);
         // 哈希表扩大2倍
 		struct mtask_context ** new_slot = mtask_malloc(s->slot_size * 2 * sizeof(struct mtask_context *));
 		memset(new_slot, 0, s->slot_size * 2 * sizeof(struct mtask_context *));
@@ -73,7 +75,12 @@ mtask_handle_register(struct mtask_context *ctx)
 		s->slot_size *= 2;
 	}
 }
-// 收回handle free handle对应的mtask_context 和 name 表中用过的name字符串
+/***********************************
+ * 销毁某个服务，销毁一个服务包括:
+ * 1.销毁结构体:struct mtask_context 的内存
+ * 2.将对应的s->slot[hash]置为空
+ * 3.将相应的s->name内存释放
+ ***********************************/
 int
 mtask_handle_retire(uint32_t handle)
 {
@@ -82,11 +89,11 @@ mtask_handle_retire(uint32_t handle)
 
 	rwlock_wlock(&s->lock);
 
-	uint32_t hash = handle & (s->slot_size-1);// 等价于  handle % s->slot_size
+	uint32_t hash = handle & (s->slot_size-1);
 	struct mtask_context * ctx = s->slot[hash];
 
 	if (ctx != NULL && mtask_context_handle(ctx) == handle) {
-		s->slot[hash] = NULL;   // 置空，哈希表腾出空间
+		s->slot[hash] = NULL;   //释放相应的服务的指向
 		ret = 1;
 		int i;
 		int j=0, n=s->name_count;
@@ -113,8 +120,13 @@ mtask_handle_retire(uint32_t handle)
 
 	return ret;
 }
-// 收回所有handle
-void 
+/***********************************************
+ * 销毁所有的服务,步骤为:
+ * 1.从s->slot中找到ctx
+ * 2.由ctx找到handle(即地址)
+ * 3.由handle调用mtask_handle_retire销毁这个服务
+ ***********************************************/
+void
 mtask_handle_retireall()
 {
 	struct handle_storage *s = H;
@@ -138,7 +150,9 @@ mtask_handle_retireall()
 			return;
 	}
 }
-// 通过handle获取mtask_context, mtask_context的引用计数加1
+/***********************************************
+ * 由服务地址得到服务结构体，并将ctx->ref原子性加1
+ ***********************************************/
 struct mtask_context *
 mtask_handle_grab(uint32_t handle)
 {
@@ -158,8 +172,10 @@ mtask_handle_grab(uint32_t handle)
 
 	return result;
 }
-// 根据名称查找handle
-uint32_t 
+/***********************************************
+ * 折半查找全局名字对应的服务的地址
+ ***********************************************/
+uint32_t
 mtask_handle_findname(const char * name)
 {
 	struct handle_storage *s = H;
@@ -189,26 +205,30 @@ mtask_handle_findname(const char * name)
 
 	return handle;
 }
-
+/***********************************************
+ * 在某个名字之前将全局名字注册进去，所以全局名字是按顺序保存的，便于折半查找
+ ***********************************************/
 static void
 _insert_name_before(struct handle_storage *s, char *name, uint32_t handle, int before)
 {
+    //如果全局名字空间不够用了，就成倍扩充
 	if (s->name_count >= s->name_cap) {
 		s->name_cap *= 2;
 		assert(s->name_cap <= MAX_SLOT_SIZE);
 		struct handle_name * n = mtask_malloc(s->name_cap * sizeof(struct handle_name));
 		int i;
 		for (i=0;i<before;i++) {
-			n[i] = s->name[i];
+			n[i] = s->name[i];//将before之前的老的复制到新的
 		}
 		for (i=before;i<s->name_count;i++) {
-			n[i+1] = s->name[i];
+			n[i+1] = s->name[i];//before的位置留给要插入的name
 		}
-		mtask_free(s->name);
-		s->name = n;
+		mtask_free(s->name);//释放老的
+		s->name = n;        //全局名字地址管理指向新分配的
 	} else {
 		int i;
 		for (i=s->name_count;i>before;i--) {
+            //将before之后的全局往后移，腾出空间给要插入的name
 			s->name[i] = s->name[i-1];
 		}
 	}
@@ -216,7 +236,11 @@ _insert_name_before(struct handle_storage *s, char *name, uint32_t handle, int b
 	s->name[before].handle = handle;
 	s->name_count ++;
 }
-// 插入 name 和 handle
+/***********************************************
+ * 按顺序注册全局名字
+ * 1.先折半查找出要插入的点
+ * 2.再调用_insert_name_before将对应的name插入进去
+ ***********************************************/
 static const char *
 _insert_name(struct handle_storage *s, const char * name, uint32_t handle)
 {
@@ -241,8 +265,7 @@ _insert_name(struct handle_storage *s, const char * name, uint32_t handle)
 
 	return result;
 }
-// name与handle绑定
-// 给服务注册一个名称的时候会用到该函数
+//注册全局名字  name与handle绑定
 const char * 
 mtask_handle_namehandle(uint32_t handle, const char *name)
 {
@@ -266,6 +289,7 @@ mtask_handle_init(int harbor)
 
 	rwlock_init(&s->lock);
 	// reserve 0 for system
+    //将harbor置为高8位的，这样能区分是哪里来的地址
 	s->harbor = (uint32_t) (harbor & 0xff) << HANDLE_REMOTE_SHIFT;
 	s->handle_index = 1;// handle句柄从1开始,0保留
 	s->name_cap = 2;    // 名字容量初始为2

@@ -137,8 +137,16 @@ drop_message(struct mtask_message *msg, void *ud)
 	// report error to the message source
 	mtask_send(NULL, source, msg->source, PTYPE_ERROR, 0, NULL, 0);
 }
-//创建新的mtask_context结构
-struct mtask_context * 
+/*******************************************************************
+ 创建一个C服务，步骤如下:
+	1.打开动态连接库，返回一个struct mtask_module
+	2.调用xxx_create创建一个实例
+	3.调用 mtask_handle_register 将服务的结构体:struct mtask_context 注册到 mtask_handle.c 中统一进行管理
+	4.创建服务的消息队列
+	5.注册消息处理函数
+	6.将服务的消息队列放入全局的消息队列尾
+ *******************************************************************/
+struct mtask_context *
 mtask_context_new(const char * name, const char *param)
 {
     //查询模块数组，找到则直接返回模块结构的指针 没有找到则打开文件进行dlopen加载 同时dlsym找到函数指针 生成mtask_module结构 放入M管理
@@ -146,10 +154,11 @@ mtask_context_new(const char * name, const char *param)
 
 	if (mod == NULL)
 		return NULL;
-    //调用模块的创建函数 xxx_create() 返回实例句柄
+    //如果动态库的 xxx_create 函数存在，就调用它返回一个 inst ,一个 inst 就是那个 动态库/C服务 特有的结构体指针
 	void *inst = mtask_module_instance_create(mod);
 	if (inst == NULL)
 		return NULL;
+    //动态分配一个 struct mtask_context,一个 struct mtask_context 对应 mtask 的一个服务
 	struct mtask_context * ctx = mtask_malloc(sizeof(*ctx));
 	CHECKCALLING_INIT(ctx)
     //填充结构 模块 实例 引用计数
@@ -176,16 +185,18 @@ mtask_context_new(const char * name, const char *param)
 	struct message_queue * queue = ctx->queue = mtask_mq_create(ctx->handle);
 	// init function maybe use ctx->handle, so it must init at last
 	context_inc();
-    //模块初始化 xxx_init()
 	CHECKCALLING_BEGIN(ctx)
-	int r = mtask_module_instance_init(mod, inst, ctx, param);// 实例化 '_init' 函数
+    //调用 xxx_init ，一般是消息处理函数、全局服务名字的注册及其他的初始化
+	int r = mtask_module_instance_init(mod, inst, ctx, param);
 	CHECKCALLING_END(ctx)
 	if (r == 0) {
-		struct mtask_context * ret = mtask_context_release(ctx);//实例化 '_release' 函数 引用计数减少
+        //如果引用为0了，就释放 struct mtask_context,'_release' 函数引用计数减少
+		struct mtask_context * ret = mtask_context_release(ctx);//
 		if (ret) {
 			ctx->init = true;// 实例化 '_init' 成功
 		}
-		mtask_globalmq_push(queue);// 将服务的消息队列放入全局的消息队列尾
+        //将服务的消息队列放入全局的消息队列尾
+		mtask_globalmq_push(queue);
 		if (ret) {
 			mtask_error(ret, "LAUNCH %s %s", name, param ? param : "");
 		}
@@ -250,7 +261,7 @@ mtask_context_release(struct mtask_context *ctx)
 	}
 	return ctx;
 }
-//往handle标识的服务中插入一条消息
+//将消息压入到目的地址服务的消息队列中供work线程取出
 int
 mtask_context_push(uint32_t handle, struct mtask_message *message)
 {   //通过handle找到H中保存的mtask_context ref+1
@@ -284,14 +295,16 @@ mtask_isremote(struct mtask_context * ctx, uint32_t handle, int * harbor)
 	}
 	return ret;
 }
-//消息调度
+//消息调度:调用服务的回调函数处理服务的消息/
 static void
 dispatch_message(struct mtask_context *ctx, struct mtask_message *msg)
 {
 	assert(ctx->init);
 	CHECKCALLING_BEGIN(ctx)
 	pthread_setspecific(G_NODE.handle_key, (void *)(uintptr_t)(ctx->handle));
+    // 取出消息类型, 这里的 type 是最上层的 type
 	int type = msg->sz >> MESSAGE_TYPE_SHIFT;
+    // 取出消息大小，就是 msg->data 的大小
 	size_t sz = msg->sz & MESSAGE_TYPE_MASK;
 	if (ctx->logfile) {
 		mtask_log_output(ctx->logfile, msg->source, type, msg->session, msg->data, sz);
@@ -312,8 +325,8 @@ dispatch_message(struct mtask_context *ctx, struct mtask_message *msg)
     }
 	CHECKCALLING_END(ctx)
 }
-
-void 
+//将服务的所有消息进行处理
+void
 mtask_context_dispatchall(struct mtask_context * ctx)
 {
 	// for mtask_error
@@ -332,9 +345,9 @@ mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q
 		if (q==NULL)
 			return NULL;
 	}
-    //得到消息队列所属的服务句柄(服务的地址)
+    //由全局的消息队列得到服务的地址
 	uint32_t handle = mtask_mq_handle(q);
-    //得到服务的结构体
+    //由服务的地址得到服务的结构体
 	struct mtask_context * ctx = mtask_handle_grab(handle);
 	if (ctx == NULL) {
 		struct drop_t d = { handle };
@@ -346,14 +359,15 @@ mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q
 	struct mtask_message msg;
 
 	for (i=0;i<n;i++) {
-		if (mtask_mq_pop(q,&msg)) {//从消息队列q中取出取消息msg
+		if (mtask_mq_pop(q,&msg)) { //从服务的消息队列中弹出一条服务消息
 			mtask_context_release(ctx);//返回1说明消息队列中已经没有消息 释放 Context 结构
 			return mtask_globalmq_pop();
 		} else if (i==0 && weight >= 0) {
+            //从服务的消息队列中取出消息成功 权重为-1为只处理一条消息 权重为0就将此服务的所有消息处理完 权重大于1就处理服务的部分消息
 			n = mtask_mq_length(q);//获取消息的长度
 			n >>= weight;
 		}
-        //判断是否过载了
+        //消息长度超过过载阀值了
 		int overload = mtask_mq_overload(q);
 		if (overload) {
 			mtask_error(ctx, "May overload, message queue length = %d", overload);
@@ -362,7 +376,7 @@ mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q
 		mtask_monitor_trigger(sm, msg.source , handle);
 
 		if (ctx->cb == NULL) {
-			mtask_free(msg.data);//释放数据
+			mtask_free(msg.data);
 		} else {
 			dispatch_message(ctx, &msg);//调度消息
 		}
@@ -444,21 +458,24 @@ cmd_timeout(struct mtask_context * context, const char * param)
 static const char *
 cmd_reg(struct mtask_context * context, const char * param)
 {
+    //如果不带参数，返回自身的地址
 	if (param == NULL || param[0] == '\0') {
 		sprintf(context->result, ":%x", context->handle);
 		return context->result;
-	} else if (param[0] == '.') {
+	} else if (param[0] == '.') { //如果带参数，去掉"."，注册本节点有效的全局名字
+        //注册本节点有效的全局名字
 		return mtask_handle_namehandle(context->handle, param + 1);
 	} else {
 		mtask_error(context, "Can't register global name %s in C", param);
 		return NULL;
 	}
 }
-//用来查询一个 . 开头的名字对应的地址。它是一个非阻塞 API ，不可以查询跨节点的全局名字。
+//用来查询一个 . 开头的名字对应的地址。
 static const char *
 cmd_query(struct mtask_context * context, const char * param)
 {
 	if (param[0] == '.') {
+        //查询本节点有效的全局名字服务对应的地址
 		uint32_t handle = mtask_handle_findname(param+1);
 		if (handle) {
 			sprintf(context->result, ":%x", handle);
@@ -468,12 +485,6 @@ cmd_query(struct mtask_context * context, const char * param)
 	return NULL;
 }
 //C API 为一个地址(服务)命名
-//这个名字一旦注册，是在 mtask 系统中通用的，你需要自己约定名字的管理的方法.
-//以 . 开头的名字是在同一 mtask 节点下有效的，跨节点的 mtask 服务对别的
-//节点下的 . 开头的名字不可见。不同的 mtask 节点可以定义相同的 . 开头的名字。
-//以字母开头的名字在整个 mtask 网络中都有效，你可以通过这种全局名字把消息发到其它节点的。
-//原则上，不鼓励滥用全局名字，它有一定的管理成本。
-//管用的方法是在业务层交换服务的数字地址，让服务自行记住其它服务的地址来传播消息。
 static const char *
 cmd_name(struct mtask_context * context, const char * param)
 {
@@ -742,7 +753,7 @@ mtask_command(struct mtask_context * context, const char * cmd , const char * pa
 
 	return NULL;
 }
-
+// 这里的 type 是最上层的 type，见 lualib-src/mtask.lua 中的 mtask table中的枚举
 static void
 _filter_args(struct mtask_context * context, int type, int *session, void ** data, size_t * sz)
 {
@@ -779,6 +790,7 @@ mtask_send(struct mtask_context * context, uint32_t source, uint32_t destination
 		mtask_free(data);
 		return -1;
 	}
+    // 会将类型封装在真正消息中的 sz 的高八位中，并且分配 session
 	_filter_args(context, type, &session, (void **)&data, &sz);
 
 	if (source == 0) {
@@ -794,7 +806,7 @@ mtask_send(struct mtask_context * context, uint32_t source, uint32_t destination
 		rmsg->destination.handle = destination;
 		rmsg->message = data;
 		rmsg->sz = sz;
-		mtask_harbor_send(rmsg, source, session);//将消息发送到harbar 有barbor发送到其他远程节点
+		mtask_harbor_send(rmsg, source, session);//将消息发送到其他远程节点
 	} else { //如果目的地址是本地节点的
 		struct mtask_message smsg;//本机消息直接压入对应的消息队列
 		smsg.source = source;
@@ -817,7 +829,7 @@ mtask_sendname(struct mtask_context * context, uint32_t source, const char * add
 		source = context->handle;
 	}
 	uint32_t des = 0;
-	if (addr[0] == ':') {   //直接的handle地址
+	if (addr[0] == ':') {   //带冒号的16进制字符串地址
         //字符串转换为unsigned long 例如开始是：1234这种格式说明直接的handle
 		des = (uint32_t)strtoul(addr+1, NULL, 16);
 	} else if (addr[0] == '.') {
