@@ -58,6 +58,8 @@ mtask.start(function()
 		print("watchdog.lua ".."cmd==>"..cmd.."  session==>"..session.."  source==>"..string.format("[%x]",source))
 		if type(subcmd) == "table" then
 			mtask.print(subcmd)
+		elseif type(subcmd) == "string" then
+			print(subcmd)
 		end
 
 		if cmd == "socket" then

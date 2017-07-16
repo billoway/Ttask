@@ -74,7 +74,6 @@ if (kevent(kfd, &ke, 1, NULL, 0, NULL) == -1 || ke.flags & EV_ERROR) {
 	}
 }
 //kevent ev:用于回传待处理事件的数组；
-
 static int 
 sp_wait(int kfd, struct event *e, int max)
 {

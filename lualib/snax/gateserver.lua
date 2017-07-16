@@ -14,6 +14,7 @@ local nodelay = false
 local connection = {}
 
 function gateserver.openclient(fd)
+	print("gateserver.lua gateserver.openclient calling".." fd"..fd)
 	if connection[fd] then
 		socketdriver.start(fd)
 	end
@@ -28,11 +29,12 @@ function gateserver.closeclient(fd)
 end
 
 function gateserver.start(handler)
-	print("gateserver.start calling")
+	print("gateserver.lua gateserver.start calling")
 	assert(handler.message)
 	assert(handler.connect)
 
 	function CMD.open( source, conf )
+		print("gateserver.lua CMD.open calling")
 		assert(not socket)
 		local address = conf.address or "0.0.0.0"
 		local port = assert(conf.port)
@@ -47,6 +49,7 @@ function gateserver.start(handler)
 	end
 
 	function CMD.close()
+		print("gateserver.lua CMD.close calling")
 		assert(socket)
 		socketdriver.close(socket)
 	end

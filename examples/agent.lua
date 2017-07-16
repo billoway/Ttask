@@ -68,6 +68,7 @@ mtask.register_protocol {
 }
 
 function CMD.start(conf)
+	print("agent.lua  start calling")
 	local fd = conf.client
 	local gate = conf.gate
 	WATCHDOG = conf.watchdog
@@ -93,7 +94,7 @@ end
 mtask.start(function()
 	print("agent.lua  start calling")
 	mtask.dispatch("lua", function(_,_, command, ...)
-		mtask.error("command==>"..command)
+		print("agent.lua  command==>"..command)
 		local f = CMD[command]
 		mtask.ret(mtask.pack(f(...)))
 	end)

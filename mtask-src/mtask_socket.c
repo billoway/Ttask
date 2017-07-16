@@ -82,22 +82,26 @@ mtask_socket_poll()
 	assert(ss);
 	struct socket_message result;
 	int more = 1;
-	int type = socket_server_poll(ss, &result, &more);//检测socket事件 
+    //检测socket事件
+	int type = socket_server_poll(ss, &result, &more);
 	switch (type) {
         case SOCKET_EXIT:
             return 0;
+        //远端有数据发送过来
         case SOCKET_DATA:
             forward_message(MTASK_SOCKET_TYPE_DATA, false, &result);
             break;
         case SOCKET_CLOSE:
             forward_message(MTASK_SOCKET_TYPE_CLOSE, false, &result);
             break;
+        //本地打开socket连接进行监听 or 连接建立成功 or 转换网络包目的地址
         case SOCKET_OPEN:
             forward_message(MTASK_SOCKET_TYPE_CONNECT, true, &result);
             break;
         case SOCKET_ERROR:
             forward_message(MTASK_SOCKET_TYPE_ERROR, true, &result);
             break;
+        //说明acccpt成功了
         case SOCKET_ACCEPT:
             forward_message(MTASK_SOCKET_TYPE_ACCEPT, true, &result);
             break;
@@ -132,7 +136,9 @@ mtask_socket_send_lowpriority(struct mtask_context *ctx, int id, void *buffer, i
 int 
 mtask_socket_listen(struct mtask_context *ctx, const char *host, int port, int backlog)
 {
+    // 哪个服务调用就取得那个服务的地址
 	uint32_t source = mtask_context_handle(ctx);
+    // 返回的是mtask框架分配的一个id 为s->slot的一个下标，一个数组索引而已
 	return socket_server_listen(SOCKET_SERVER, source, host, port, backlog);
 }
 

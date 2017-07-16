@@ -180,7 +180,9 @@ save_uncomplete(lua_State *L, int fd) {
 }
 
 static inline int
-read_size(uint8_t * buffer) {
+read_size(uint8_t * buffer)
+{
+// 由于mtask用的protobuf的前两个字节表示包长度(不包括前两个字节)，这里把包长度解析出来
     int r = (int)buffer[0] << 8 | (int)buffer[1];
     return r;
 }
@@ -223,9 +225,10 @@ close_uncomplete(lua_State *L, int fd) {
         mtask_free(uc);
     }
 }
-
+// filter_data_就是解protobuf/sproto包的过程
 static int
-filter_data_(lua_State *L, int fd, uint8_t * buffer, int size) {
+filter_data_(lua_State *L, int fd, uint8_t * buffer, int size)
+{
     struct queue *q = lua_touserdata(L,1);
     struct uncomplete * uc = find_uncomplete(q, fd);
     if (uc) {
@@ -275,8 +278,10 @@ filter_data_(lua_State *L, int fd, uint8_t * buffer, int size) {
             return 1;
         }
         int pack_size = read_size(buffer);
-        buffer+=2;
-        size-=2;
+        // buffer就是从网络中真实收到的字节码，在堆中的大小为 MIN_READ_BUFFER
+        // 这里pack_size 是收到的网络包真实大小除去protobuf/sproto前两个字节的字节数
+        buffer+=2;// 处理protobuf的前两个字节
+        size-=2; // size是read函数收到的真实的数据字节数
         
         if (size < pack_size) {
             struct uncomplete * uc = save_uncomplete(L, fd);
@@ -307,7 +312,8 @@ filter_data_(lua_State *L, int fd, uint8_t * buffer, int size) {
 }
 
 static inline int
-filter_data(lua_State *L, int fd, uint8_t * buffer, int size) {
+filter_data(lua_State *L, int fd, uint8_t * buffer, int size)
+{
     int ret = filter_data_(L, fd, buffer, size);
     // buffer is the data of socket message, it malloc at socket_server.c : function forward_message .
     // it should be free before return,
@@ -335,7 +341,8 @@ pushstring(lua_State *L, const char * msg, int size) {
  string msg | lightuserdata/integer
  */
 static int
-lfilter(lua_State *L) {
+lfilter(lua_State *L)
+{
     struct mtask_socket_message *message = lua_touserdata(L,2);
     int size = (int)luaL_checkinteger(L,3);
     char * buffer = message->buffer;
@@ -353,8 +360,9 @@ lfilter(lua_State *L) {
             // ignore listen id (message->id)
             assert(size == -1);	// never padding string
             return filter_data(L, message->id, (uint8_t *)buffer, message->ud);
-        case MTASK_SOCKET_TYPE_CONNECT:
+        case MTASK_SOCKET_TYPE_CONNECT: // 'L'->'S'后
             // ignore listen fd connect
+            // 这里其实返回的是上层传过来的 queue
             return 1;
         case MTASK_SOCKET_TYPE_CLOSE:
             // no more data in fd (message->id)
@@ -416,7 +424,8 @@ lpop(lua_State *L) {
  */
 
 static const char *
-tolstring(lua_State *L, size_t *sz, int index) {
+tolstring(lua_State *L, size_t *sz, int index)
+{
     const char * ptr;
     if (lua_isuserdata(L,index)) {
         ptr = (const char *)lua_touserdata(L,index);
@@ -428,13 +437,15 @@ tolstring(lua_State *L, size_t *sz, int index) {
 }
 
 static inline void
-write_size(uint8_t * buffer, int len) {
+write_size(uint8_t * buffer, int len)
+{
     buffer[0] = (len >> 8) & 0xff;
     buffer[1] = len & 0xff;
 }
 
 static int
-lpack(lua_State *L) {
+lpack(lua_State *L)
+{
     size_t len;
     const char * ptr = tolstring(L, &len, 1);
     if (len >= 0x10000) {

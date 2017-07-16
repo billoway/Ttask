@@ -248,7 +248,8 @@ socket_keepalive(int fd) {
 }
 
 static int
-reserve_id(struct socket_server *ss) {
+_reserve_id(struct socket_server *ss)
+{
 	int i;
 	for (i=0;i<MAX_SOCKET;i++) {
 		int id = ATOM_INC(&(ss->alloc_id));
@@ -276,21 +277,29 @@ clear_wb_list(struct wb_list *list) {
 	list->tail = NULL;
 }
 
+/**
+ 创建一个管道，管道的读端给epoll管理；
+ 分配一个struct socket_server统领全局(其中有65535个struct socket结构体，
+ 每个此结构体都对应一个socket描述符，并将所有的 type 设置为SOCKET_TYPE_INVALID.
+ */
 struct socket_server * 
 socket_server_create()
 {
 	int i;
 	int fd[2];
+    //生成epoll专用的描述符
 	poll_fd efd = sp_create();
 	if (sp_invalid(efd)) {
 		fprintf(stderr, "socket-server: create event pool failed.\n");
 		return NULL;
 	}
+    //创建一个管道，fd[1]为写入端，fd[0]为读取端
 	if (pipe(fd)) {
 		sp_release(efd);
 		fprintf(stderr, "socket-server: create socket pair failed.\n");
 		return NULL;
 	}
+    //将管道的读取端给epoll管理，mtask本地需要监听、绑定某个端口时都会从上层往管道的写端发送cmd
 	if (sp_add(efd, fd[0], NULL)) {
 		// add recvctrl_fd to event poll
 		fprintf(stderr, "socket-server: can't add server fd to event pool.\n");
@@ -307,6 +316,7 @@ socket_server_create()
 	ss->checkctrl = 1;
 
 	for (i=0;i<MAX_SOCKET;i++) {
+        //ss->slot[i]为一个struct socket
 		struct socket *s = &ss->slot[i];
 		s->type = SOCKET_TYPE_INVALID;
 		clear_wb_list(&s->high);
@@ -378,9 +388,9 @@ check_wb_list(struct wb_list *s) {
 	assert(s->head == NULL);
 	assert(s->tail == NULL);
 }
-
+//当有新的描述符需要加入时调用此函数
 static struct socket *
-new_fd(struct socket_server *ss, int id, int fd, int protocol, uintptr_t opaque, bool add) {
+_new_fd(struct socket_server *ss, int id, int fd, int protocol, uintptr_t opaque, bool add) {
 	struct socket * s = &ss->slot[HASH_ID(id)];
 	assert(s->type == SOCKET_TYPE_RESERVE);
 
@@ -395,7 +405,7 @@ new_fd(struct socket_server *ss, int id, int fd, int protocol, uintptr_t opaque,
 	s->fd = fd;
 	s->protocol = protocol;
 	s->p.size = MIN_READ_BUFFER;
-	s->opaque = opaque;
+	s->opaque = opaque; // 调用监听动作的服务的地址
 	s->wb_size = 0;
 	s->warn_size = 0;
 	check_wb_list(&s->high);
@@ -450,7 +460,7 @@ open_socket(struct socket_server *ss, struct request_open * request, struct sock
 		goto _failed;
 	}
 
-	ns = new_fd(ss, id, sock, PROTOCOL_TCP, request->opaque, true);
+	ns = _new_fd(ss, id, sock, PROTOCOL_TCP, request->opaque, true);
 	if (ns == NULL) {
 		close(sock);
 		result->data = "reach mtask socket number limit";
@@ -792,11 +802,11 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 }
 
 static int
-listen_socket(struct socket_server *ss, struct request_listen * request, struct socket_message *result)
+_listen_socket(struct socket_server *ss, struct request_listen * request, struct socket_message *result)
 {
 	int id = request->id;
 	int listen_fd = request->fd;
-	struct socket *s = new_fd(ss, id, listen_fd, PROTOCOL_TCP, request->opaque, false);
+	struct socket *s = _new_fd(ss, id, listen_fd, PROTOCOL_TCP, request->opaque, false);
 	if (s == NULL) {
 		goto _failed;
 	}
@@ -849,7 +859,7 @@ bind_socket(struct socket_server *ss, struct request_bind *request, struct socke
 	result->id = id;
 	result->opaque = request->opaque;
 	result->ud = 0;
-	struct socket *s = new_fd(ss, id, request->fd, PROTOCOL_TCP, request->opaque, true);
+	struct socket *s = _new_fd(ss, id, request->fd, PROTOCOL_TCP, request->opaque, true);
 	if (s == NULL) {
 		result->data = "reach mtask socket number limit";
 		return SOCKET_ERROR;
@@ -861,11 +871,11 @@ bind_socket(struct socket_server *ss, struct request_bind *request, struct socke
 }
 
 static int
-start_socket(struct socket_server *ss, struct request_start *request, struct socket_message *result)
+_start_socket(struct socket_server *ss, struct request_start *request, struct socket_message *result)
 {
 	int id = request->id;
 	result->id = id;
-	result->opaque = request->opaque;
+	result->opaque = request->opaque; // 服务的地址
 	result->ud = 0;
 	result->data = NULL;
 	struct socket *s = &ss->slot[HASH_ID(id)];
@@ -921,9 +931,9 @@ block_readpipe(int pipefd, void *buffer, int sz)
 		return;
 	}
 }
-
+//判断管道的接收描述符是不是有请求过来
 static int
-has_cmd(struct socket_server *ss) 
+_has_cmd(struct socket_server *ss) 
 {
 	struct timeval tv = {0,0};
 	int retval;
@@ -947,7 +957,7 @@ add_udp_socket(struct socket_server *ss, struct request_udp *udp)
 	} else {
 		protocol = PROTOCOL_UDP;
 	}
-	struct socket *ns = new_fd(ss, id, udp->fd, protocol, udp->opaque, true);
+	struct socket *ns = _new_fd(ss, id, udp->fd, protocol, udp->opaque, true);
 	if (ns == NULL) {
 		close(udp->fd);
 		ss->slot[HASH_ID(id)].type = SOCKET_TYPE_INVALID;
@@ -983,9 +993,15 @@ set_udp_address(struct socket_server *ss, struct request_setudp *request, struct
 	return -1;
 }
 
-// return type
+/******************************************************************
+ * 此函数涉及的只是状态的变化
+ * 建立一个socket连接的过程是:'L'->'S'->客户端发过来一个包->'T'->'S'
+ * 绑定在调用socket_server_listen时已经发生了
+ * 发包给客户端:'D'
+ ******************************************************************/
+
 static int
-ctrl_cmd(struct socket_server *ss, struct socket_message *result) 
+_ctrl_cmd(struct socket_server *ss, struct socket_message *result) 
 {
 	int fd = ss->recvctrl_fd;
 	// the length of message is one byte, so 256+8 buffer size is enough.
@@ -997,41 +1013,41 @@ ctrl_cmd(struct socket_server *ss, struct socket_message *result)
 	block_readpipe(fd, buffer, len);
 	// ctrl command only exist in local fd, so don't worry about endian.
 	switch (type) {
-	case 'S':
-		return start_socket(ss,(struct request_start *)buffer, result);
-	case 'B':
-		return bind_socket(ss,(struct request_bind *)buffer, result);
-	case 'L':
-		return listen_socket(ss,(struct request_listen *)buffer, result);
-	case 'K':
-		return close_socket(ss,(struct request_close *)buffer, result);
-	case 'O':
-		return open_socket(ss, (struct request_open *)buffer, result);
-	case 'X':
-		result->opaque = 0;
-		result->id = 0;
-		result->ud = 0;
-		result->data = NULL;
-		return SOCKET_EXIT;
-	case 'D':
-		return send_socket(ss, (struct request_send *)buffer, result, PRIORITY_HIGH, NULL);
-	case 'P':
-		return send_socket(ss, (struct request_send *)buffer, result, PRIORITY_LOW, NULL);
-	case 'A': {
-		struct request_send_udp * rsu = (struct request_send_udp *)buffer;
-		return send_socket(ss, &rsu->send, result, PRIORITY_HIGH, rsu->address);
-	}
-	case 'C':
-		return set_udp_address(ss, (struct request_setudp *)buffer, result);
-	case 'T':
-		setopt_socket(ss, (struct request_setopt *)buffer);
-		return -1;
-	case 'U':
-		add_udp_socket(ss, (struct request_udp *)buffer);
-		return -1;
-	default:
-		fprintf(stderr, "socket-server: Unknown ctrl %c.\n",type);
-		return -1;
+        case 'S'://listen与accept后都会调用'S' 返回:SOCKET_ERROR、SOCKET_OPEN
+            return _start_socket(ss,(struct request_start *)buffer, result);
+        case 'B':
+            return bind_socket(ss,(struct request_bind *)buffer, result);
+        case 'L'://返回:-1、SOCKET_ERROR
+            return _listen_socket(ss,(struct request_listen *)buffer, result);
+        case 'K':
+            return close_socket(ss,(struct request_close *)buffer, result);
+        case 'O':
+            return open_socket(ss, (struct request_open *)buffer, result);
+        case 'X':
+            result->opaque = 0;
+            result->id = 0;
+            result->ud = 0;
+            result->data = NULL;
+            return SOCKET_EXIT;
+        case 'D':
+            return send_socket(ss, (struct request_send *)buffer, result, PRIORITY_HIGH, NULL);
+        case 'P':
+            return send_socket(ss, (struct request_send *)buffer, result, PRIORITY_LOW, NULL);
+        case 'A': {
+            struct request_send_udp * rsu = (struct request_send_udp *)buffer;
+            return send_socket(ss, &rsu->send, result, PRIORITY_HIGH, rsu->address);
+        }
+        case 'C':
+            return set_udp_address(ss, (struct request_setudp *)buffer, result);
+        case 'T':
+            setopt_socket(ss, (struct request_setopt *)buffer);
+            return -1;
+        case 'U':
+            add_udp_socket(ss, (struct request_udp *)buffer);
+            return -1;
+        default:
+            fprintf(stderr, "socket-server: Unknown ctrl %c.\n",type);
+            return -1;
 	};
 
 	return -1;
@@ -1047,16 +1063,16 @@ forward_message_tcp(struct socket_server *ss, struct socket *s, struct socket_me
 	if (n<0) {
 		FREE(buffer);
 		switch(errno) {
-		case EINTR:
-			break;
-		case AGAIN_WOULDBLOCK:
-			fprintf(stderr, "socket-server: EAGAIN capture.\n");
-			break;
-		default:
-			// close when error
-			force_close(ss, s, result);
-			result->data = strerror(errno);
-			return SOCKET_ERROR;
+            case EINTR:
+                break;
+            case AGAIN_WOULDBLOCK:
+                fprintf(stderr, "socket-server: EAGAIN capture.\n");
+                break;
+            default:
+                // close when error
+                force_close(ss, s, result);
+                result->data = strerror(errno);
+                return SOCKET_ERROR;
 		}
 		return -1;
 	}
@@ -1180,12 +1196,13 @@ report_connect(struct socket_server *ss, struct socket *s, struct socket_message
 	}
 }
 
-// return 0 when failed
+// return 0 when failed,or -1 when file limit
 static int
-report_accept(struct socket_server *ss, struct socket *s, struct socket_message *result) 
+_report_accept(struct socket_server *ss, struct socket *s, struct socket_message *result)
 {
 	union sockaddr_all u;
 	socklen_t len = sizeof(u);
+    // 返回已连接描述符
 	int client_fd = accept(s->fd, &u.s, &len);
 	if (client_fd < 0) {
 	if (errno == EMFILE || errno == ENFILE) {
@@ -1199,14 +1216,14 @@ report_accept(struct socket_server *ss, struct socket *s, struct socket_message 
 		}
 
 	}
-	int id = reserve_id(ss);
+	int id = _reserve_id(ss);
 	if (id < 0) {
 		close(client_fd);
 		return 0;
 	}
 	socket_keepalive(client_fd);
 	sp_nonblocking(client_fd);
-	struct socket *ns = new_fd(ss, id, client_fd, PROTOCOL_TCP, s->opaque, false);
+	struct socket *ns = _new_fd(ss, id, client_fd, PROTOCOL_TCP, s->opaque, false);
 	if (ns == NULL) {
 		close(client_fd);
 		return 0;
@@ -1247,14 +1264,23 @@ clear_closed_event(struct socket_server *ss, struct socket_message * result, int
 	}
 }
 
-// return type
+/*
+ 1、socket_server_poll监控有没有事件发生
+ 2、如果有事件发生，看是不是从管道过来的，如果是管道过来的就调用_ctrl_cmd去处理，如果是从 socket 描述符过来的，根据 s->type 进行相应的处理
+ 3、最后根据socket_server_poll的返回值调用 forward_message组装一个装有数据为struct mtask_socket_message的结构体的消息结构:struct mtask_message(消息类型为 PTYPE_SOCKET)
+ 4、消息结构struct mtask_message组装完毕后，调用mtask_context_push将其压入对应服务的消息队列，这样gate服务就知道远端有数据过来了。
+
+ */
 int 
 socket_server_poll(struct socket_server *ss, struct socket_message * result, int * more) 
 {
 	for (;;) {
+        //控制是否去检查本地从管道写过来的请求
 		if (ss->checkctrl) {
-			if (has_cmd(ss)) {
-				int type = ctrl_cmd(ss, result);
+            //判断管道的接收描述符是不是有请求过来
+			if (_has_cmd(ss)) {
+                 //如果有就得到请求的类型
+				int type = _ctrl_cmd(ss, result);
 				if (type != -1) {
 					clear_closed_event(ss, result, type);
 					return type;
@@ -1264,7 +1290,9 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
 				ss->checkctrl = 0;
 			}
 		}
+        //如果event_index等于event_n，说明已经处理完了
 		if (ss->event_index == ss->event_n) {
+            //等待有事情发生， 返回的是需要处理的事件个数
 			ss->event_n = sp_wait(ss->event_fd, ss->ev, MAX_EVENT);
 			ss->checkctrl = 1;
 			if (more) {
@@ -1286,76 +1314,83 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
 			continue;
 		}
 		switch (s->type) {
-		case SOCKET_TYPE_CONNECTING:
-			return report_connect(ss, s, result);
-		case SOCKET_TYPE_LISTEN: {
-			int ok = report_accept(ss, s, result);
-			if (ok > 0) {
-				return SOCKET_ACCEPT;
-			} if (ok < 0 ) {
-				return SOCKET_ERROR;
-			}
-			// when ok == 0, retry
-			break;
-		}
-		case SOCKET_TYPE_INVALID:
-			fprintf(stderr, "socket-server: invalid socket\n");
-			break;
-		default:
-			if (e->read) {
-				int type;
-				if (s->protocol == PROTOCOL_TCP) {
-					type = forward_message_tcp(ss, s, result);
-				} else {
-					type = forward_message_udp(ss, s, result);
-					if (type == SOCKET_UDP) {
-						// try read again
-						--ss->event_index;
-						return SOCKET_UDP;
-					}
-				}
-				if (e->write && type != SOCKET_CLOSE && type != SOCKET_ERROR) {
-					// Try to dispatch write message next step if write flag set.
-					e->read = false;
-					--ss->event_index;
-				}
-				if (type == -1)
-					break;
-				clear_closed_event(ss, result, type);
-				return type;
-			}
-			if (e->write) {
-				int type = send_buffer(ss, s, result);
-				if (type == -1)
-					break;
-				return type;
-			}
-			if (e->error) {
-				// close when error
-				int error;
-				socklen_t len = sizeof(error);  
-				int code = getsockopt(s->fd, SOL_SOCKET, SO_ERROR, &error, &len);  
-				if (code < 0) {
-					result->data = strerror(errno);
-				} else if (error != 0) {
-					result->data = strerror(error);
-				} else {
-					result->data = "Unknown error";
-				}
-				force_close(ss, s, result);
-				return SOCKET_ERROR;
-			}
-			break;
+            // 主动connect得到远端相应
+            case SOCKET_TYPE_CONNECTING:
+                // 正常的话描述符类型为 SOCKET_TYPE_CONNECTED
+                return report_connect(ss, s, result);
+                // listen完以后管道再接收一个"S"命令状态就变为SOCKET_TYPE_LISTEN了
+            case SOCKET_TYPE_LISTEN: {
+                int ok = _report_accept(ss, s, result);
+                if (ok > 0) {
+                    return SOCKET_ACCEPT;
+                } if (ok < 0 ) {
+                    //accept成功后会大于0
+                    return SOCKET_ERROR;
+                }
+                // when ok == 0, retry
+                break;
+            }
+            case SOCKET_TYPE_INVALID:
+                fprintf(stderr, "socket-server: invalid socket\n");
+                break;
+            default:
+                //有数据可读,在sp_wait中进行设置
+                if (e->read) {
+                    int type;
+                    if (s->protocol == PROTOCOL_TCP) {
+                        // 正常的话返回 SOCKET_DATA
+                        type = forward_message_tcp(ss, s, result);
+                    } else {
+                        type = forward_message_udp(ss, s, result);
+                        if (type == SOCKET_UDP) {
+                            // try read again
+                            --ss->event_index;
+                            return SOCKET_UDP;
+                        }
+                    }
+                    if (e->write && type != SOCKET_CLOSE && type != SOCKET_ERROR) {
+                        // Try to dispatch write message next step if write flag set.
+                        e->read = false;
+                        --ss->event_index;
+                    }
+                    if (type == -1)
+                        break;
+                    clear_closed_event(ss, result, type);
+                    return type;
+                }
+                if (e->write) {
+                    int type = send_buffer(ss, s, result);
+                    if (type == -1)
+                        break;
+                    return type;
+                }
+                if (e->error) {
+                    // close when error
+                    int error;
+                    socklen_t len = sizeof(error);  
+                    int code = getsockopt(s->fd, SOL_SOCKET, SO_ERROR, &error, &len);  
+                    if (code < 0) {
+                        result->data = strerror(errno);
+                    } else if (error != 0) {
+                        result->data = strerror(error);
+                    } else {
+                        result->data = "Unknown error";
+                    }
+                    force_close(ss, s, result);
+                    return SOCKET_ERROR;
+                }
+                break;
 		}
 	}
 }
 
 static void
-send_request(struct socket_server *ss, struct request_package *request, char type, int len)
+_send_request(struct socket_server *ss, struct request_package *request, char type, int len)
 {
 	request->header[6] = (uint8_t)type;
 	request->header[7] = (uint8_t)len;
 	for (;;) {
+        // 写到管道的发送端/写端
 		int n = (int)write(ss->sendctrl_fd, &request->header[6], len+2);
 		if (n<0) {
 			if (errno != EINTR) {
@@ -1376,7 +1411,7 @@ open_request(struct socket_server *ss, struct request_package *req, uintptr_t op
 		fprintf(stderr, "socket-server : Invalid addr %s.\n",addr);
 		return -1;
 	}
-	int id = reserve_id(ss);
+	int id = _reserve_id(ss);
 	if (id < 0)
 		return -1;
 	req->u.open.opaque = opaque;
@@ -1395,7 +1430,7 @@ socket_server_connect(struct socket_server *ss, uintptr_t opaque, const char * a
 	int len = open_request(ss, &request, opaque, addr, port);
 	if (len < 0)
 		return -1;
-	send_request(ss, &request, 'O', sizeof(request.u.open) + len);
+	_send_request(ss, &request, 'O', sizeof(request.u.open) + len);
 	return request.u.open.id;
 }
 
@@ -1422,7 +1457,7 @@ socket_server_send(struct socket_server *ss, int id, const void * buffer, int sz
     request.u.send.sz = sz;
     request.u.send.buffer = (char *)buffer;
     
-    send_request(ss, &request, 'D', sizeof(request.u.send));
+    _send_request(ss, &request, 'D', sizeof(request.u.send));
     return 0;
 }
 
@@ -1441,7 +1476,7 @@ socket_server_send_lowpriority(struct socket_server *ss, int id, const void * bu
     request.u.send.sz = sz;
     request.u.send.buffer = (char *)buffer;
     
-    send_request(ss, &request, 'P', sizeof(request.u.send));
+    _send_request(ss, &request, 'P', sizeof(request.u.send));
     return 0;
 }
 
@@ -1449,7 +1484,7 @@ void
 socket_server_exit(struct socket_server *ss)
 {
 	struct request_package request;
-	send_request(ss, &request, 'X', 0);
+	_send_request(ss, &request, 'X', 0);
 }
 
 void
@@ -1459,7 +1494,7 @@ socket_server_close(struct socket_server *ss, uintptr_t opaque, int id)
 	request.u.close.id = id;
 	request.u.close.shutdown = 0;
 	request.u.close.opaque = opaque;
-	send_request(ss, &request, 'K', sizeof(request.u.close));
+	_send_request(ss, &request, 'K', sizeof(request.u.close));
 }
 
 void
@@ -1469,7 +1504,7 @@ socket_server_shutdown(struct socket_server *ss, uintptr_t opaque, int id)
     request.u.close.id = id;
     request.u.close.shutdown = 1;
     request.u.close.opaque = opaque;
-    send_request(ss, &request, 'K', sizeof(request.u.close));
+    _send_request(ss, &request, 'K', sizeof(request.u.close));
 }
 
 
@@ -1477,7 +1512,7 @@ socket_server_shutdown(struct socket_server *ss, uintptr_t opaque, int id)
 // return -1 means failed
 // or return AF_INET or AF_INET6
 static int
-do_bind(const char *host, int port, int protocol, int *family) 
+_do_bind(const char *host, int port, int protocol, int *family)
 {
 	int fd;
 	int status;
@@ -1499,7 +1534,7 @@ do_bind(const char *host, int port, int protocol, int *family)
 	}
 	ai_hints.ai_protocol = protocol;
 
-	status = getaddrinfo( host, portstr, &ai_hints, &ai_list );
+	status = getaddrinfo(host, portstr, &ai_hints, &ai_list );
 	if ( status != 0 ) {
 		return -1;
 	}
@@ -1525,10 +1560,10 @@ _failed_fd:
 }
 
 static int
-do_listen(const char * host, int port, int backlog) 
+_do_listen(const char * host, int port, int backlog)
 {
 	int family = 0;
-	int listen_fd = do_bind(host, port, IPPROTO_TCP, &family);
+	int listen_fd = _do_bind(host, port, IPPROTO_TCP, &family);
 	if (listen_fd < 0) {
 		return -1;
 	}
@@ -1539,23 +1574,31 @@ do_listen(const char * host, int port, int backlog)
 	return listen_fd;
 }
 
+/**
+ socketdriver.listen发生的事情主要为: 
+ 1. 调用bind绑定端口 
+ 2. 调用listen监听端口 
+ 3. 调用write向本地的管道的写端写了一个 'L'命令
+ */
 int 
 socket_server_listen(struct socket_server *ss, uintptr_t opaque, const char * addr, int port, int backlog) 
 {
-	int fd = do_listen(addr, port, backlog);
+	int fd = _do_listen(addr, port, backlog);
 	if (fd < 0) {
 		return -1;
 	}
 	struct request_package request;
-	int id = reserve_id(ss);
+    //为此socket描述符分配一个id给上层使用，为s->slot的一个下标，一个数组索引而已
+	int id = _reserve_id(ss);
 	if (id < 0) {
 		close(fd);
 		return id;
 	}
+    //opaque就是调用listen的服务的地址
 	request.u.listen.opaque = opaque;
 	request.u.listen.id = id;
 	request.u.listen.fd = fd;
-	send_request(ss, &request, 'L', sizeof(request.u.listen));
+	_send_request(ss, &request, 'L', sizeof(request.u.listen));
 	return id;
 }
 
@@ -1563,13 +1606,13 @@ int
 socket_server_bind(struct socket_server *ss, uintptr_t opaque, int fd) 
 {
 	struct request_package request;
-	int id = reserve_id(ss);
+	int id = _reserve_id(ss);
 	if (id < 0)
 		return -1;
 	request.u.bind.opaque = opaque;
 	request.u.bind.id = id;
 	request.u.bind.fd = fd;
-	send_request(ss, &request, 'B', sizeof(request.u.bind));
+	_send_request(ss, &request, 'B', sizeof(request.u.bind));
 	return id;
 }
 
@@ -1579,7 +1622,7 @@ socket_server_start(struct socket_server *ss, uintptr_t opaque, int id)
 	struct request_package request;
 	request.u.start.id = id;
 	request.u.start.opaque = opaque;
-	send_request(ss, &request, 'S', sizeof(request.u.start));
+	_send_request(ss, &request, 'S', sizeof(request.u.start));
 }
 
 void
@@ -1589,7 +1632,7 @@ socket_server_nodelay(struct socket_server *ss, int id)
 	request.u.setopt.id = id;
 	request.u.setopt.what = TCP_NODELAY;
 	request.u.setopt.value = 1;
-	send_request(ss, &request, 'T', sizeof(request.u.setopt));
+	_send_request(ss, &request, 'T', sizeof(request.u.setopt));
 }
 
 void 
@@ -1607,7 +1650,7 @@ socket_server_udp(struct socket_server *ss, uintptr_t opaque, const char * addr,
 	int family;
 	if (port != 0 || addr != NULL) {
 		// bind
-		fd = do_bind(addr, port, IPPROTO_UDP, &family);
+		fd = _do_bind(addr, port, IPPROTO_UDP, &family);
 		if (fd < 0) {
 			return -1;
 		}
@@ -1620,7 +1663,7 @@ socket_server_udp(struct socket_server *ss, uintptr_t opaque, const char * addr,
 	}
 	sp_nonblocking(fd);
 
-	int id = reserve_id(ss);
+	int id = _reserve_id(ss);
 	if (id < 0) {
 		close(fd);
 		return -1;
@@ -1631,7 +1674,7 @@ socket_server_udp(struct socket_server *ss, uintptr_t opaque, const char * addr,
 	request.u.udp.opaque = opaque;
 	request.u.udp.family = family;
 
-	send_request(ss, &request, 'U', sizeof(request.u.udp));	
+	_send_request(ss, &request, 'U', sizeof(request.u.udp));	
 	return id;
 }
 
@@ -1665,7 +1708,7 @@ socket_server_udp_send(struct socket_server *ss, int id, const struct socket_udp
     
     memcpy(request.u.send_udp.address, udp_address, addrsz);
     
-    send_request(ss, &request, 'A', sizeof(request.u.send_udp.send)+addrsz);
+    _send_request(ss, &request, 'A', sizeof(request.u.send_udp.send)+addrsz);
     return 0;
 }
 
@@ -1703,7 +1746,7 @@ socket_server_udp_connect(struct socket_server *ss, int id, const char * addr, i
 
 	freeaddrinfo( ai_list );
 
-	send_request(ss, &request, 'C', sizeof(request.u.set_udp) - sizeof(request.u.set_udp.address) +addrsz);
+	_send_request(ss, &request, 'C', sizeof(request.u.set_udp) - sizeof(request.u.set_udp.address) +addrsz);
 
 	return 0;
 }
