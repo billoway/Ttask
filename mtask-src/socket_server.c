@@ -18,33 +18,33 @@
 
 #define MAX_INFO 128
 // MAX_SOCKET will be 2^MAX_SOCKET_P
-#define MAX_SOCKET_P 16
-#define MAX_EVENT 64    // 用于epoll_wait的第三个参数 每次返回事件的多少
-#define MIN_READ_BUFFER 64 // 最小分配的读缓冲大小 为了减少read的调用 尽可能分配大的读缓冲区
-#define SOCKET_TYPE_INVALID 0   // 无效的sock fd
-#define SOCKET_TYPE_RESERVE 1   // 预留已经被申请 即将被使用
-#define SOCKET_TYPE_PLISTEN 2   // listen fd但是未加入epoll管理
-#define SOCKET_TYPE_LISTEN 3    // 监听到套接字已经加入epoll管理
-#define SOCKET_TYPE_CONNECTING 4 //尝试连接的socket fd
-#define SOCKET_TYPE_CONNECTED 5//已经建立连接的socket 主动conn或者被动accept的套接字 已经加入epoll管理
-#define SOCKET_TYPE_HALFCLOSE 6   //已经在应用层关闭了fd 但是数据还没有发送完 还没有close
-#define SOCKET_TYPE_PACCEPT 7  //accept返回的fd 未加入epoll
-#define SOCKET_TYPE_BIND 8  // 其他类型的fd 如 stdin stdout等
+#define MAX_SOCKET_P            16
+#define MAX_EVENT               64    // 用于epoll_wait的第三个参数 每次返回事件的多少
+#define MIN_READ_BUFFER         64 // 最小分配的读缓冲大小 为了减少read的调用 尽可能分配大的读缓冲区
+#define SOCKET_TYPE_INVALID     0   // 无效的sock fd
+#define SOCKET_TYPE_RESERVE     1   // 预留已经被申请 即将被使用
+#define SOCKET_TYPE_PLISTEN     2   // listen fd但是未加入epoll管理
+#define SOCKET_TYPE_LISTEN      3    // 监听到套接字已经加入epoll管理
+#define SOCKET_TYPE_CONNECTING  4 //尝试连接的socket fd
+#define SOCKET_TYPE_CONNECTED   5//已经建立连接的socket 主动conn或者被动accept的套接字 已经加入epoll管理
+#define SOCKET_TYPE_HALFCLOSE   6   //已经在应用层关闭了fd 但是数据还没有发送完 还没有close
+#define SOCKET_TYPE_PACCEPT     7  //accept返回的fd 未加入epoll
+#define SOCKET_TYPE_BIND        8  // 其他类型的fd 如 stdin stdout等
 
 #define MAX_SOCKET (1<<MAX_SOCKET_P)    // 1 << 16 -> 64K
 
-#define PRIORITY_HIGH 0
-#define PRIORITY_LOW 1
+#define PRIORITY_HIGH           0
+#define PRIORITY_LOW            1
 
 #define HASH_ID(id) (((unsigned)id) % MAX_SOCKET)
 
-#define PROTOCOL_TCP 0
-#define PROTOCOL_UDP 1
-#define PROTOCOL_UDPv6 2
+#define PROTOCOL_TCP            0
+#define PROTOCOL_UDP            1
+#define PROTOCOL_UDPv6          2
 
-#define UDP_ADDRESS_SIZE 19	// ipv6 128bit + port 16bit + 1 byte type
+#define UDP_ADDRESS_SIZE        19	// ipv6 128bit + port 16bit + 1 byte type
 
-#define MAX_UDP_PACKAGE 65535
+#define MAX_UDP_PACKAGE         65535
 
 // EAGAIN and EWOULDBLOCK may be not the same value.
 #if (EAGAIN != EWOULDBLOCK)
@@ -216,7 +216,7 @@ struct send_object {
 #define FREE mtask_free
 
 static inline bool
-send_object_init(struct socket_server *ss, struct send_object *so, void *object, int sz)
+_send_object_init(struct socket_server *ss, struct send_object *so, void *object, int sz)
 {
 	if (sz < 0) {
 		so->buffer = ss->soi.buffer(object);
@@ -232,7 +232,8 @@ send_object_init(struct socket_server *ss, struct send_object *so, void *object,
 }
 
 static inline void
-write_buffer_free(struct socket_server *ss, struct write_buffer *wb) {
+_write_buffer_free(struct socket_server *ss, struct write_buffer *wb)
+{
 	if (wb->userobject) {
 		ss->soi.free(wb->buffer);
 	} else {
@@ -242,7 +243,8 @@ write_buffer_free(struct socket_server *ss, struct write_buffer *wb) {
 }
 
 static void
-socket_keepalive(int fd) {
+_socket_keepalive(int fd)
+{
 	int keepalive = 1;
 	setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&keepalive , sizeof(keepalive));  
 }
@@ -272,7 +274,8 @@ _reserve_id(struct socket_server *ss)
 }
 
 static inline void
-clear_wb_list(struct wb_list *list) {
+_clear_wb_list(struct wb_list *list)
+{
 	list->head = NULL;
 	list->tail = NULL;
 }
@@ -319,8 +322,8 @@ socket_server_create()
         //ss->slot[i]为一个struct socket
 		struct socket *s = &ss->slot[i];
 		s->type = SOCKET_TYPE_INVALID;
-		clear_wb_list(&s->high);
-		clear_wb_list(&s->low);
+		_clear_wb_list(&s->high);
+		_clear_wb_list(&s->low);
 	}
 	ss->alloc_id = 0;
 	ss->event_n = 0;
@@ -333,19 +336,21 @@ socket_server_create()
 }
 
 static void
-free_wb_list(struct socket_server *ss, struct wb_list *list) {
+_free_wb_list(struct socket_server *ss, struct wb_list *list)
+{
 	struct write_buffer *wb = list->head;
 	while (wb) {
 		struct write_buffer *tmp = wb;
 		wb = wb->next;
-		write_buffer_free(ss, tmp);
+		_write_buffer_free(ss, tmp);
 	}
 	list->head = NULL;
 	list->tail = NULL;
 }
 
 static void
-force_close(struct socket_server *ss, struct socket *s, struct socket_message *result) {
+_force_close(struct socket_server *ss, struct socket *s, struct socket_message *result)
+{
 	result->id = s->id;
 	result->ud = 0;
 	result->data = NULL;
@@ -354,8 +359,8 @@ force_close(struct socket_server *ss, struct socket *s, struct socket_message *r
 		return;
 	}
 	assert(s->type != SOCKET_TYPE_RESERVE);
-	free_wb_list(ss,&s->high);
-	free_wb_list(ss,&s->low);
+	_free_wb_list(ss,&s->high);
+	_free_wb_list(ss,&s->low);
 	if (s->type != SOCKET_TYPE_PACCEPT && s->type != SOCKET_TYPE_PLISTEN) {
 		sp_del(ss->event_fd, s->fd);
 	}
@@ -368,13 +373,14 @@ force_close(struct socket_server *ss, struct socket *s, struct socket_message *r
 }
 
 void 
-socket_server_release(struct socket_server *ss) {
+socket_server_release(struct socket_server *ss)
+{
 	int i;
 	struct socket_message dummy;
 	for (i=0;i<MAX_SOCKET;i++) {
 		struct socket *s = &ss->slot[i];
 		if (s->type != SOCKET_TYPE_RESERVE) {
-			force_close(ss, s , &dummy);
+			_force_close(ss, s , &dummy);
 		}
 	}
 	close(ss->sendctrl_fd);
@@ -384,13 +390,15 @@ socket_server_release(struct socket_server *ss) {
 }
 
 static inline void
-check_wb_list(struct wb_list *s) {
+_check_wb_list(struct wb_list *s)
+{
 	assert(s->head == NULL);
 	assert(s->tail == NULL);
 }
 //当有新的描述符需要加入时调用此函数
 static struct socket *
-_new_fd(struct socket_server *ss, int id, int fd, int protocol, uintptr_t opaque, bool add) {
+_new_fd(struct socket_server *ss, int id, int fd, int protocol, uintptr_t opaque, bool add)
+{
 	struct socket * s = &ss->slot[HASH_ID(id)];
 	assert(s->type == SOCKET_TYPE_RESERVE);
 
@@ -408,14 +416,15 @@ _new_fd(struct socket_server *ss, int id, int fd, int protocol, uintptr_t opaque
 	s->opaque = opaque; // 调用监听动作的服务的地址
 	s->wb_size = 0;
 	s->warn_size = 0;
-	check_wb_list(&s->high);
-	check_wb_list(&s->low);
+	_check_wb_list(&s->high);
+	_check_wb_list(&s->low);
 	return s;
 }
 
 // return -1 when connecting
 static int
-open_socket(struct socket_server *ss, struct request_open * request, struct socket_message *result) {
+_open_socket(struct socket_server *ss, struct request_open * request, struct socket_message *result)
+{
 	int id = request->id;
 	result->opaque = request->opaque;
 	result->id = id;
@@ -444,7 +453,7 @@ open_socket(struct socket_server *ss, struct request_open * request, struct sock
 		if ( sock < 0 ) {
 			continue;
 		}
-		socket_keepalive(sock);
+		_socket_keepalive(sock);
 		sp_nonblocking(sock);
 		status = connect( sock, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
 		if ( status != 0 && errno != EINPROGRESS) {
@@ -490,7 +499,8 @@ _failed:
 }
 
 static int
-send_list_tcp(struct socket_server *ss, struct socket *s, struct wb_list *list, struct socket_message *result) {
+_send_list_tcp(struct socket_server *ss, struct socket *s, struct wb_list *list, struct socket_message *result)
+{
 	while (list->head) {
 		struct write_buffer * tmp = list->head;
 		for (;;) {
@@ -502,7 +512,7 @@ send_list_tcp(struct socket_server *ss, struct socket *s, struct wb_list *list, 
 				case AGAIN_WOULDBLOCK:
 					return -1;
 				}
-				force_close(ss,s, result);
+				_force_close(ss,s, result);
 				return SOCKET_CLOSE;
 			}
 			s->wb_size -= sz;
@@ -514,7 +524,7 @@ send_list_tcp(struct socket_server *ss, struct socket *s, struct wb_list *list, 
 			break;
 		}
 		list->head = tmp->next;
-		write_buffer_free(ss,tmp);
+		_write_buffer_free(ss,tmp);
 	}
 	list->tail = NULL;
 
@@ -522,7 +532,8 @@ send_list_tcp(struct socket_server *ss, struct socket *s, struct wb_list *list, 
 }
 
 static socklen_t
-udp_socket_address(struct socket *s, const uint8_t udp_address[UDP_ADDRESS_SIZE], union sockaddr_all *sa) {
+udp_socket_address(struct socket *s, const uint8_t udp_address[UDP_ADDRESS_SIZE], union sockaddr_all *sa)
+{
 	int type = (uint8_t)udp_address[0];
 	if (type != s->protocol)
 		return 0;
@@ -546,7 +557,8 @@ udp_socket_address(struct socket *s, const uint8_t udp_address[UDP_ADDRESS_SIZE]
 }
 
 static int
-send_list_udp(struct socket_server *ss, struct socket *s, struct wb_list *list, struct socket_message *result) {
+_send_list_udp(struct socket_server *ss, struct socket *s, struct wb_list *list, struct socket_message *result)
+{
 	while (list->head) {
 		struct write_buffer * tmp = list->head;
 		union sockaddr_all sa;
@@ -560,20 +572,11 @@ send_list_udp(struct socket_server *ss, struct socket *s, struct wb_list *list, 
 			}
 			fprintf(stderr, "socket-server : udp (%d) sendto error %s.\n",s->id, strerror(errno));
 			return -1;
-/*			// ignore udp sendto error
-			
-			result->opaque = s->opaque;
-			result->id = s->id;
-			result->ud = 0;
-			result->data = NULL;
-
-			return SOCKET_ERROR;
-*/
 		}
 
 		s->wb_size -= tmp->sz;
 		list->head = tmp->next;
-		write_buffer_free(ss,tmp);
+		_write_buffer_free(ss,tmp);
 	}
 	list->tail = NULL;
 
@@ -581,16 +584,18 @@ send_list_udp(struct socket_server *ss, struct socket *s, struct wb_list *list, 
 }
 
 static int
-send_list(struct socket_server *ss, struct socket *s, struct wb_list *list, struct socket_message *result) {
+_send_list(struct socket_server *ss, struct socket *s, struct wb_list *list, struct socket_message *result)
+{
 	if (s->protocol == PROTOCOL_TCP) {
-		return send_list_tcp(ss, s, list, result);
+		return _send_list_tcp(ss, s, list, result);
 	} else {
-		return send_list_udp(ss, s, list, result);
+		return _send_list_udp(ss, s, list, result);
 	}
 }
 
 static inline int
-list_uncomplete(struct wb_list *s) {
+_list_uncomplete(struct wb_list *s)
+{
 	struct write_buffer *wb = s->head;
 	if (wb == NULL)
 		return 0;
@@ -599,7 +604,8 @@ list_uncomplete(struct wb_list *s) {
 }
 
 static void
-raise_uncomplete(struct socket * s) {
+_raise_uncomplete(struct socket * s)
+{
 	struct wb_list *low = &s->low;
 	struct write_buffer *tmp = low->head;
 	low->head = tmp->next;
@@ -616,7 +622,7 @@ raise_uncomplete(struct socket * s) {
 }
 
 static inline int
-send_buffer_empty(struct socket *s)
+_send_buffer_empty(struct socket *s)
 {
 	return (s->high.head == NULL && s->low.head == NULL);
 }
@@ -625,34 +631,35 @@ send_buffer_empty(struct socket *s)
 
 	1. send high list as far as possible.
 	2. If high list is empty, try to send low list.
-	3. If low list head is uncomplete (send a part before), move the head of low list to empty high list (call raise_uncomplete) .
+	3. If low list head is uncomplete (send a part before), move the head of low list to empty high list (call _raise_uncomplete) .
 	4. If two lists are both empty, turn off the event. (call check_close)
  */
 static int
-send_buffer(struct socket_server *ss, struct socket *s, struct socket_message *result) {
-	assert(!list_uncomplete(&s->low));
+_send_buffer(struct socket_server *ss, struct socket *s, struct socket_message *result)
+{
+	assert(!_list_uncomplete(&s->low));
 	// step 1
-	if (send_list(ss,s,&s->high,result) == SOCKET_CLOSE) {
+	if (_send_list(ss,s,&s->high,result) == SOCKET_CLOSE) {
 		return SOCKET_CLOSE;
 	}
 	if (s->high.head == NULL) {
 		// step 2
 		if (s->low.head != NULL) {
-			if (send_list(ss,s,&s->low,result) == SOCKET_CLOSE) {
+			if (_send_list(ss,s,&s->low,result) == SOCKET_CLOSE) {
 				return SOCKET_CLOSE;
 			}
 			// step 3
-			if (list_uncomplete(&s->low)) {
-				raise_uncomplete(s);
+			if (_list_uncomplete(&s->low)) {
+				_raise_uncomplete(s);
 				return -1;
 			}
 		}
 			// step 4
-			assert(send_buffer_empty(s) && s->wb_size == 0);
+			assert(_send_buffer_empty(s) && s->wb_size == 0);
 			sp_write(ss->event_fd, s->fd, s, false);
 
 			if (s->type == SOCKET_TYPE_HALFCLOSE) {
-				force_close(ss, s, result);
+				_force_close(ss, s, result);
 				return SOCKET_CLOSE;
 			}
 			if(s->warn_size > 0){
@@ -670,11 +677,11 @@ send_buffer(struct socket_server *ss, struct socket *s, struct socket_message *r
 }
 
 static struct write_buffer *
-append_sendbuffer_(struct socket_server *ss, struct wb_list *s, struct request_send * request, int size, int n)
+_append_sendbuffer_(struct socket_server *ss, struct wb_list *s, struct request_send * request, int size, int n)
 {
 	struct write_buffer * buf = MALLOC(size);
 	struct send_object so;
-	buf->userobject = send_object_init(ss, &so, request->buffer, request->sz);
+	buf->userobject = _send_object_init(ss, &so, request->buffer, request->sz);
 	buf->ptr = (char*)so.buffer+n;
 	buf->sz = so.sz - n;
 	buf->buffer = request->buffer;
@@ -691,25 +698,25 @@ append_sendbuffer_(struct socket_server *ss, struct wb_list *s, struct request_s
 }
 
 static inline void
-append_sendbuffer_udp(struct socket_server *ss, struct socket *s, int priority, struct request_send * request, const uint8_t udp_address[UDP_ADDRESS_SIZE])
+_append_sendbuffer_udp(struct socket_server *ss, struct socket *s, int priority, struct request_send * request, const uint8_t udp_address[UDP_ADDRESS_SIZE])
 {
 	struct wb_list *wl = (priority == PRIORITY_HIGH) ? &s->high : &s->low;
-	struct write_buffer *buf = append_sendbuffer_(ss, wl, request, SIZEOF_UDPBUFFER, 0);
+	struct write_buffer *buf = _append_sendbuffer_(ss, wl, request, SIZEOF_UDPBUFFER, 0);
 	memcpy(buf->udp_address, udp_address, UDP_ADDRESS_SIZE);
 	s->wb_size += buf->sz;
 }
 
 static inline void
-append_sendbuffer(struct socket_server *ss, struct socket *s, struct request_send * request, int n)
+_append_sendbuffer(struct socket_server *ss, struct socket *s, struct request_send * request, int n)
 {
-	struct write_buffer *buf = append_sendbuffer_(ss, &s->high, request, SIZEOF_TCPBUFFER, n);
+	struct write_buffer *buf = _append_sendbuffer_(ss, &s->high, request, SIZEOF_TCPBUFFER, n);
 	s->wb_size += buf->sz;
 }
 
 static inline void
-append_sendbuffer_low(struct socket_server *ss,struct socket *s, struct request_send * request)
+__append_sendbuffer_low(struct socket_server *ss,struct socket *s, struct request_send * request)
 {
-	struct write_buffer *buf = append_sendbuffer_(ss, &s->low, request, SIZEOF_TCPBUFFER, 0);
+	struct write_buffer *buf = _append_sendbuffer_(ss, &s->low, request, SIZEOF_TCPBUFFER, 0);
 	s->wb_size += buf->sz;
 }
 
@@ -722,12 +729,12 @@ append_sendbuffer_low(struct socket_server *ss,struct socket *s, struct request_
 	Else append package to high (PRIORITY_HIGH) or low (PRIORITY_LOW) list.
  */
 static int
-send_socket(struct socket_server *ss, struct request_send * request, struct socket_message *result, int priority, const uint8_t *udp_address)
+_send_socket(struct socket_server *ss, struct request_send * request, struct socket_message *result, int priority, const uint8_t *udp_address)
 {
 	int id = request->id;
 	struct socket * s = &ss->slot[HASH_ID(id)];
 	struct send_object so;
-	send_object_init(ss, &so, request->buffer, request->sz);
+	_send_object_init(ss, &so, request->buffer, request->sz);
 	if (s->type == SOCKET_TYPE_INVALID || s->id != id 
 		|| s->type == SOCKET_TYPE_HALFCLOSE
 		|| s->type == SOCKET_TYPE_PACCEPT) {
@@ -739,7 +746,7 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 		so.free_func(request->buffer);
 		return -1;
 	}
-	if (send_buffer_empty(s) && s->type == SOCKET_TYPE_CONNECTED) {
+	if (_send_buffer_empty(s) && s->type == SOCKET_TYPE_CONNECTED) {
 		if (s->protocol == PROTOCOL_TCP) {
 			int n = (int)write(s->fd, so.buffer, so.sz);
 			if (n<0) {
@@ -750,7 +757,7 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 					break;
 				default:
 					fprintf(stderr, "socket-server: write to %d (fd=%d) error :%s.\n",id,s->fd,strerror(errno));
-					force_close(ss,s,result);
+					_force_close(ss,s,result);
 					so.free_func(request->buffer);
 					return SOCKET_CLOSE;
 				}
@@ -759,7 +766,7 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 				so.free_func(request->buffer);
 				return -1;
 			}
-			append_sendbuffer(ss, s, request, n);	// add to high priority list, even priority == PRIORITY_LOW
+			_append_sendbuffer(ss, s, request, n);	// add to high priority list, even priority == PRIORITY_LOW
 		} else {
 			// udp
 			if (udp_address == NULL) {
@@ -769,7 +776,7 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 			socklen_t sasz = udp_socket_address(s, udp_address, &sa);
 			int n = (int)sendto(s->fd, so.buffer, so.sz, 0, &sa.s, sasz);
 			if (n != so.sz) {
-				append_sendbuffer_udp(ss,s,priority,request,udp_address);
+				_append_sendbuffer_udp(ss,s,priority,request,udp_address);
 			} else {
 				so.free_func(request->buffer);
 				return -1;
@@ -779,15 +786,15 @@ send_socket(struct socket_server *ss, struct request_send * request, struct sock
 	} else {
 		if (s->protocol == PROTOCOL_TCP) {
 			if (priority == PRIORITY_LOW) {
-				append_sendbuffer_low(ss, s, request);
+				__append_sendbuffer_low(ss, s, request);
 			} else {
-				append_sendbuffer(ss, s, request, 0);
+				_append_sendbuffer(ss, s, request, 0);
 			}
 		} else {
 			if (udp_address == NULL) {
 				udp_address = s->p.udp_address;
 			}
-			append_sendbuffer_udp(ss,s,priority,request,udp_address);
+			_append_sendbuffer_udp(ss,s,priority,request,udp_address);
 		}
 	}
 	if (s->wb_size >= WARNING_SIZE && s->wb_size >= s->warn_size) {
@@ -824,7 +831,7 @@ _failed:
 }
 
 static int
-close_socket(struct socket_server *ss, struct request_close *request, struct socket_message *result)
+_close_socket(struct socket_server *ss, struct request_close *request, struct socket_message *result)
 {
 	int id = request->id;
 	struct socket * s = &ss->slot[HASH_ID(id)];
@@ -835,14 +842,14 @@ close_socket(struct socket_server *ss, struct request_close *request, struct soc
 		result->data = NULL;
 		return SOCKET_CLOSE;
 	}
-	if (!send_buffer_empty(s)) { 
-		int type = send_buffer(ss,s,result);
-		// type : -1 or SOCKET_WARNING or SOCKET_CLOSE, SOCKET_WARNING means send_buffer_empty
+	if (!_send_buffer_empty(s)) { 
+		int type = _send_buffer(ss,s,result);
+		// type : -1 or SOCKET_WARNING or SOCKET_CLOSE, SOCKET_WARNING means _send_buffer_empty
 		if (type != -1 && type != SOCKET_WARNING)
 			return type;
 	}
-	if (request->shutdown || send_buffer_empty(s)) {
-		force_close(ss,s,result);
+	if (request->shutdown || _send_buffer_empty(s)) {
+		_force_close(ss,s,result);
 		result->id = id;
 		result->opaque = request->opaque;
 		return SOCKET_CLOSE;
@@ -853,7 +860,7 @@ close_socket(struct socket_server *ss, struct request_close *request, struct soc
 }
 
 static int
-bind_socket(struct socket_server *ss, struct request_bind *request, struct socket_message *result)
+_bind_socket(struct socket_server *ss, struct request_bind *request, struct socket_message *result)
 {
 	int id = request->id;
 	result->id = id;
@@ -885,7 +892,7 @@ _start_socket(struct socket_server *ss, struct request_start *request, struct so
 	}
 	if (s->type == SOCKET_TYPE_PACCEPT || s->type == SOCKET_TYPE_PLISTEN) {
 		if (sp_add(ss->event_fd, s->fd, s)) {
-			force_close(ss, s, result);
+			_force_close(ss, s, result);
 			result->data = strerror(errno);
 			return SOCKET_ERROR;
 		}
@@ -904,7 +911,7 @@ _start_socket(struct socket_server *ss, struct request_start *request, struct so
 }
 
 static void
-setopt_socket(struct socket_server *ss, struct request_setopt *request)
+_setopt_socket(struct socket_server *ss, struct request_setopt *request)
 {
 	int id = request->id;
 	struct socket *s = &ss->slot[HASH_ID(id)];
@@ -916,7 +923,7 @@ setopt_socket(struct socket_server *ss, struct request_setopt *request)
 }
 
 static void
-block_readpipe(int pipefd, void *buffer, int sz) 
+_block_readpipe(int pipefd, void *buffer, int sz) 
 {
 	for (;;) {
 		int n = (int)read(pipefd, buffer, sz);
@@ -948,7 +955,7 @@ _has_cmd(struct socket_server *ss)
 }
 
 static void
-add_udp_socket(struct socket_server *ss, struct request_udp *udp)
+_add_udp_socket(struct socket_server *ss, struct request_udp *udp)
 {
 	int id = udp->id;
 	int protocol;
@@ -968,7 +975,7 @@ add_udp_socket(struct socket_server *ss, struct request_udp *udp)
 }
 
 static int
-set_udp_address(struct socket_server *ss, struct request_setudp *request, struct socket_message *result) 
+_set_udp_address(struct socket_server *ss, struct request_setudp *request, struct socket_message *result) 
 {
 	int id = request->id;
 	struct socket *s = &ss->slot[HASH_ID(id)];
@@ -1007,22 +1014,22 @@ _ctrl_cmd(struct socket_server *ss, struct socket_message *result)
 	// the length of message is one byte, so 256+8 buffer size is enough.
 	uint8_t buffer[256];
 	uint8_t header[2];
-	block_readpipe(fd, header, sizeof(header));
+	_block_readpipe(fd, header, sizeof(header));
 	int type = header[0];
 	int len = header[1];
-	block_readpipe(fd, buffer, len);
+	_block_readpipe(fd, buffer, len);
 	// ctrl command only exist in local fd, so don't worry about endian.
 	switch (type) {
         case 'S'://listen与accept后都会调用'S' 返回:SOCKET_ERROR、SOCKET_OPEN
             return _start_socket(ss,(struct request_start *)buffer, result);
         case 'B':
-            return bind_socket(ss,(struct request_bind *)buffer, result);
+            return _bind_socket(ss,(struct request_bind *)buffer, result);
         case 'L'://返回:-1、SOCKET_ERROR
             return _listen_socket(ss,(struct request_listen *)buffer, result);
         case 'K':
-            return close_socket(ss,(struct request_close *)buffer, result);
+            return _close_socket(ss,(struct request_close *)buffer, result);
         case 'O':
-            return open_socket(ss, (struct request_open *)buffer, result);
+            return _open_socket(ss, (struct request_open *)buffer, result);
         case 'X':
             result->opaque = 0;
             result->id = 0;
@@ -1030,20 +1037,20 @@ _ctrl_cmd(struct socket_server *ss, struct socket_message *result)
             result->data = NULL;
             return SOCKET_EXIT;
         case 'D':
-            return send_socket(ss, (struct request_send *)buffer, result, PRIORITY_HIGH, NULL);
+            return _send_socket(ss, (struct request_send *)buffer, result, PRIORITY_HIGH, NULL);
         case 'P':
-            return send_socket(ss, (struct request_send *)buffer, result, PRIORITY_LOW, NULL);
+            return _send_socket(ss, (struct request_send *)buffer, result, PRIORITY_LOW, NULL);
         case 'A': {
             struct request_send_udp * rsu = (struct request_send_udp *)buffer;
-            return send_socket(ss, &rsu->send, result, PRIORITY_HIGH, rsu->address);
+            return _send_socket(ss, &rsu->send, result, PRIORITY_HIGH, rsu->address);
         }
         case 'C':
-            return set_udp_address(ss, (struct request_setudp *)buffer, result);
+            return _set_udp_address(ss, (struct request_setudp *)buffer, result);
         case 'T':
-            setopt_socket(ss, (struct request_setopt *)buffer);
+            _setopt_socket(ss, (struct request_setopt *)buffer);
             return -1;
         case 'U':
-            add_udp_socket(ss, (struct request_udp *)buffer);
+            _add_udp_socket(ss, (struct request_udp *)buffer);
             return -1;
         default:
             fprintf(stderr, "socket-server: Unknown ctrl %c.\n",type);
@@ -1055,7 +1062,7 @@ _ctrl_cmd(struct socket_server *ss, struct socket_message *result)
 
 // return -1 (ignore) when error
 static int
-forward_message_tcp(struct socket_server *ss, struct socket *s, struct socket_message * result)
+_forward_message_tcp(struct socket_server *ss, struct socket *s, struct socket_message * result)
 {
 	int sz = s->p.size;
 	char * buffer = MALLOC(sz);
@@ -1070,7 +1077,7 @@ forward_message_tcp(struct socket_server *ss, struct socket *s, struct socket_me
                 break;
             default:
                 // close when error
-                force_close(ss, s, result);
+                _force_close(ss, s, result);
                 result->data = strerror(errno);
                 return SOCKET_ERROR;
 		}
@@ -1078,7 +1085,7 @@ forward_message_tcp(struct socket_server *ss, struct socket *s, struct socket_me
 	}
 	if (n==0) {
 		FREE(buffer);
-		force_close(ss, s, result);
+		_force_close(ss, s, result);
 		return SOCKET_CLOSE;
 	}
 
@@ -1102,7 +1109,7 @@ forward_message_tcp(struct socket_server *ss, struct socket *s, struct socket_me
 }
 
 static int
-gen_udp_address(int protocol, union sockaddr_all *sa, uint8_t * udp_address)
+_gen_udp_address(int protocol, union sockaddr_all *sa, uint8_t * udp_address)
 {
 	int addrsz = 1;
 	udp_address[0] = (uint8_t)protocol;
@@ -1121,7 +1128,7 @@ gen_udp_address(int protocol, union sockaddr_all *sa, uint8_t * udp_address)
 }
 
 static int
-forward_message_udp(struct socket_server *ss, struct socket *s, struct socket_message * result) 
+_forward_message_udp(struct socket_server *ss, struct socket *s, struct socket_message * result) 
 {
 	union sockaddr_all sa;
 	socklen_t slen = sizeof(sa);
@@ -1133,7 +1140,7 @@ forward_message_udp(struct socket_server *ss, struct socket *s, struct socket_me
 			break;
 		default:
 			// close when error
-			force_close(ss, s, result);
+			_force_close(ss, s, result);
 			result->data = strerror(errno);
 			return SOCKET_ERROR;
 		}
@@ -1144,12 +1151,12 @@ forward_message_udp(struct socket_server *ss, struct socket *s, struct socket_me
 		if (s->protocol != PROTOCOL_UDP)
 			return -1;
 		data = MALLOC(n + 1 + 2 + 4);
-		gen_udp_address(PROTOCOL_UDP, &sa, data + n);
+		_gen_udp_address(PROTOCOL_UDP, &sa, data + n);
 	} else {
 		if (s->protocol != PROTOCOL_UDPv6)
 			return -1;
 		data = MALLOC(n + 1 + 2 + 16);
-		gen_udp_address(PROTOCOL_UDPv6, &sa, data + n);
+		_gen_udp_address(PROTOCOL_UDPv6, &sa, data + n);
 	}
 	memcpy(data, ss->udpbuffer, n);
 
@@ -1162,13 +1169,13 @@ forward_message_udp(struct socket_server *ss, struct socket *s, struct socket_me
 }
 
 static int
-report_connect(struct socket_server *ss, struct socket *s, struct socket_message *result) 
+_report_connect(struct socket_server *ss, struct socket *s, struct socket_message *result) 
 {
 	int error;
 	socklen_t len = sizeof(error);  
 	int code = getsockopt(s->fd, SOL_SOCKET, SO_ERROR, &error, &len);  
 	if (code < 0 || error) {  
-		force_close(ss,s, result);
+		_force_close(ss,s, result);
 		if (code >= 0)
 			result->data = strerror(error);
 		else
@@ -1179,7 +1186,7 @@ report_connect(struct socket_server *ss, struct socket *s, struct socket_message
 		result->opaque = s->opaque;
 		result->id = s->id;
 		result->ud = 0;
-		if (send_buffer_empty(s)) {
+		if (_send_buffer_empty(s)) {
 			sp_write(ss->event_fd, s->fd, s, false);
 		}
 		union sockaddr_all u;
@@ -1221,7 +1228,7 @@ _report_accept(struct socket_server *ss, struct socket *s, struct socket_message
 		close(client_fd);
 		return 0;
 	}
-	socket_keepalive(client_fd);
+	_socket_keepalive(client_fd);
 	sp_nonblocking(client_fd);
 	struct socket *ns = _new_fd(ss, id, client_fd, PROTOCOL_TCP, s->opaque, false);
 	if (ns == NULL) {
@@ -1246,7 +1253,7 @@ _report_accept(struct socket_server *ss, struct socket *s, struct socket_message
 }
 
 static inline void 
-clear_closed_event(struct socket_server *ss, struct socket_message * result, int type) 
+_clear_closed_event(struct socket_server *ss, struct socket_message * result, int type) 
 {
 	if (type == SOCKET_CLOSE || type == SOCKET_ERROR) {
 		int id = result->id;
@@ -1282,7 +1289,7 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
                  //如果有就得到请求的类型
 				int type = _ctrl_cmd(ss, result);
 				if (type != -1) {
-					clear_closed_event(ss, result, type);
+					_clear_closed_event(ss, result, type);
 					return type;
 				} else
 					continue;
@@ -1317,7 +1324,7 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
             // 主动connect得到远端相应
             case SOCKET_TYPE_CONNECTING:
                 // 正常的话描述符类型为 SOCKET_TYPE_CONNECTED
-                return report_connect(ss, s, result);
+                return _report_connect(ss, s, result);
                 // listen完以后管道再接收一个"S"命令状态就变为SOCKET_TYPE_LISTEN了
             case SOCKET_TYPE_LISTEN: {
                 int ok = _report_accept(ss, s, result);
@@ -1339,9 +1346,9 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
                     int type;
                     if (s->protocol == PROTOCOL_TCP) {
                         // 正常的话返回 SOCKET_DATA
-                        type = forward_message_tcp(ss, s, result);
+                        type = _forward_message_tcp(ss, s, result);
                     } else {
-                        type = forward_message_udp(ss, s, result);
+                        type = _forward_message_udp(ss, s, result);
                         if (type == SOCKET_UDP) {
                             // try read again
                             --ss->event_index;
@@ -1355,11 +1362,11 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
                     }
                     if (type == -1)
                         break;
-                    clear_closed_event(ss, result, type);
+                    _clear_closed_event(ss, result, type);
                     return type;
                 }
                 if (e->write) {
-                    int type = send_buffer(ss, s, result);
+                    int type = _send_buffer(ss, s, result);
                     if (type == -1)
                         break;
                     return type;
@@ -1376,7 +1383,7 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
                     } else {
                         result->data = "Unknown error";
                     }
-                    force_close(ss, s, result);
+                    _force_close(ss, s, result);
                     return SOCKET_ERROR;
                 }
                 break;
@@ -1404,7 +1411,7 @@ _send_request(struct socket_server *ss, struct request_package *request, char ty
 }
 
 static int
-open_request(struct socket_server *ss, struct request_package *req, uintptr_t opaque, const char *addr, int port)
+_open_request(struct socket_server *ss, struct request_package *req, uintptr_t opaque, const char *addr, int port)
 {
 	int len = (int)strlen(addr);
 	if (len + sizeof(req->u.open) >= 256) {
@@ -1422,12 +1429,12 @@ open_request(struct socket_server *ss, struct request_package *req, uintptr_t op
 
 	return len;
 }
-
+//"O"
 int 
 socket_server_connect(struct socket_server *ss, uintptr_t opaque, const char * addr, int port) 
 {
 	struct request_package request;
-	int len = open_request(ss, &request, opaque, addr, port);
+	int len = _open_request(ss, &request, opaque, addr, port);
 	if (len < 0)
 		return -1;
 	_send_request(ss, &request, 'O', sizeof(request.u.open) + len);
@@ -1435,20 +1442,21 @@ socket_server_connect(struct socket_server *ss, uintptr_t opaque, const char * a
 }
 
 static void
-free_buffer(struct socket_server *ss, const void * buffer, int sz) 
+_free_buffer(struct socket_server *ss, const void * buffer, int sz) 
 {
 	struct send_object so;
-	send_object_init(ss, &so, (void *)buffer, sz);
+	_send_object_init(ss, &so, (void *)buffer, sz);
 	so.free_func((void *)buffer);
 }
 
 // return -1 when error, 0 when success
+//"D"
 int
 socket_server_send(struct socket_server *ss, int id, const void * buffer, int sz)
 {
     struct socket * s = &ss->slot[HASH_ID(id)];
     if (s->id != id || s->type == SOCKET_TYPE_INVALID) {
-        free_buffer(ss, buffer, sz);
+        _free_buffer(ss, buffer, sz);
         return -1;
     }
     
@@ -1462,12 +1470,13 @@ socket_server_send(struct socket_server *ss, int id, const void * buffer, int sz
 }
 
 // return -1 when error, 0 when success
+//"P"
 int
 socket_server_send_lowpriority(struct socket_server *ss, int id, const void * buffer, int sz)
 {
     struct socket * s = &ss->slot[HASH_ID(id)];
     if (s->id != id || s->type == SOCKET_TYPE_INVALID) {
-        free_buffer(ss, buffer, sz);
+        _free_buffer(ss, buffer, sz);
         return -1;
     }
     
@@ -1479,14 +1488,14 @@ socket_server_send_lowpriority(struct socket_server *ss, int id, const void * bu
     _send_request(ss, &request, 'P', sizeof(request.u.send));
     return 0;
 }
-
+//"X"
 void
 socket_server_exit(struct socket_server *ss)
 {
 	struct request_package request;
 	_send_request(ss, &request, 'X', 0);
 }
-
+//"K"
 void
 socket_server_close(struct socket_server *ss, uintptr_t opaque, int id)
 {
@@ -1496,7 +1505,7 @@ socket_server_close(struct socket_server *ss, uintptr_t opaque, int id)
 	request.u.close.opaque = opaque;
 	_send_request(ss, &request, 'K', sizeof(request.u.close));
 }
-
+//"K"
 void
 socket_server_shutdown(struct socket_server *ss, uintptr_t opaque, int id)
 {
@@ -1580,6 +1589,7 @@ _do_listen(const char * host, int port, int backlog)
  2. 调用listen监听端口 
  3. 调用write向本地的管道的写端写了一个 'L'命令
  */
+//"L"
 int 
 socket_server_listen(struct socket_server *ss, uintptr_t opaque, const char * addr, int port, int backlog) 
 {
@@ -1601,7 +1611,7 @@ socket_server_listen(struct socket_server *ss, uintptr_t opaque, const char * ad
 	_send_request(ss, &request, 'L', sizeof(request.u.listen));
 	return id;
 }
-
+//"B"
 int
 socket_server_bind(struct socket_server *ss, uintptr_t opaque, int fd) 
 {
@@ -1615,7 +1625,7 @@ socket_server_bind(struct socket_server *ss, uintptr_t opaque, int fd)
 	_send_request(ss, &request, 'B', sizeof(request.u.bind));
 	return id;
 }
-
+//"S"
 void 
 socket_server_start(struct socket_server *ss, uintptr_t opaque, int id) 
 {
@@ -1624,7 +1634,7 @@ socket_server_start(struct socket_server *ss, uintptr_t opaque, int id)
 	request.u.start.opaque = opaque;
 	_send_request(ss, &request, 'S', sizeof(request.u.start));
 }
-
+// "T"
 void
 socket_server_nodelay(struct socket_server *ss, int id)
 {
@@ -1642,7 +1652,7 @@ socket_server_userobject(struct socket_server *ss, struct socket_object_interfac
 }
 
 // UDP
-
+//"U"
 int 
 socket_server_udp(struct socket_server *ss, uintptr_t opaque, const char * addr, int port) 
 {
@@ -1677,13 +1687,13 @@ socket_server_udp(struct socket_server *ss, uintptr_t opaque, const char * addr,
 	_send_request(ss, &request, 'U', sizeof(request.u.udp));	
 	return id;
 }
-
+//"A"
 int
 socket_server_udp_send(struct socket_server *ss, int id, const struct socket_udp_address *addr, const void *buffer, int sz)
 {
     struct socket * s = &ss->slot[HASH_ID(id)];
     if (s->id != id || s->type == SOCKET_TYPE_INVALID) {
-        free_buffer(ss, buffer, sz);
+        _free_buffer(ss, buffer, sz);
         return -1;
     }
     
@@ -1702,7 +1712,7 @@ socket_server_udp_send(struct socket_server *ss, int id, const struct socket_udp
             addrsz = 1+2+16;	// 1 type, 2 port, 16 ipv6
             break;
         default:
-            free_buffer(ss, buffer, sz);
+            _free_buffer(ss, buffer, sz);
             return -1;
     }
     
@@ -1711,7 +1721,7 @@ socket_server_udp_send(struct socket_server *ss, int id, const struct socket_udp
     _send_request(ss, &request, 'A', sizeof(request.u.send_udp.send)+addrsz);
     return 0;
 }
-
+//"C"
 int
 socket_server_udp_connect(struct socket_server *ss, int id, const char * addr, int port) 
 {
@@ -1742,7 +1752,7 @@ socket_server_udp_connect(struct socket_server *ss, int id, const char * addr, i
 		return -1;
 	}
 
-	int addrsz = gen_udp_address(protocol, (union sockaddr_all *)ai_list->ai_addr, request.u.set_udp.address);
+	int addrsz = _gen_udp_address(protocol, (union sockaddr_all *)ai_list->ai_addr, request.u.set_udp.address);
 
 	freeaddrinfo( ai_list );
 

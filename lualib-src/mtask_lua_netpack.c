@@ -1,27 +1,27 @@
 #define LUA_LIB
 
-#include "mtask_malloc.h"
-
-#include "mtask_socket.h"
-
-#include <lua.h>
-#include <lauxlib.h>
-
 #include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define QUEUESIZE 1024
-#define HASHSIZE 4096
-#define SMALLSTRING 2048
+#include <lua.h>
+#include <lauxlib.h>
 
-#define TYPE_DATA 1
-#define TYPE_MORE 2
-#define TYPE_ERROR 3
-#define TYPE_OPEN 4
-#define TYPE_CLOSE 5
-#define TYPE_WARNING 6
+#include "mtask_malloc.h"
+#include "mtask_socket.h"
+
+
+#define QUEUESIZE       1024
+#define HASHSIZE        4096
+#define SMALLSTRING     2048
+
+#define TYPE_DATA       1
+#define TYPE_MORE       2
+#define TYPE_ERROR      3
+#define TYPE_OPEN       4
+#define TYPE_CLOSE      5
+#define TYPE_WARNING    6
 
 /*
 	Each package is uint16 + data , uint16 (serialized in big-endian) is the number of bytes comprising the data .
@@ -49,7 +49,8 @@ struct queue {
 };
 
 static void
-clear_list(struct uncomplete * uc) {
+clear_list(struct uncomplete * uc)
+{
     while (uc) {
         mtask_free(uc->pack.buffer);
         void * tmp = uc;
@@ -59,7 +60,8 @@ clear_list(struct uncomplete * uc) {
 }
 
 static int
-lclear(lua_State *L) {
+lclear(lua_State *L)
+{
     struct queue * q = lua_touserdata(L, 1);
     if (q == NULL) {
         return 0;
@@ -82,7 +84,8 @@ lclear(lua_State *L) {
 }
 
 static inline int
-hash_fd(int fd) {
+hash_fd(int fd)
+{
     int a = fd >> 24;
     int b = fd >> 12;
     int c = fd;
@@ -90,7 +93,8 @@ hash_fd(int fd) {
 }
 
 static struct uncomplete *
-find_uncomplete(struct queue *q, int fd) {
+find_uncomplete(struct queue *q, int fd)
+{
     if (q == NULL)
         return NULL;
     int h = hash_fd(fd);
@@ -114,7 +118,8 @@ find_uncomplete(struct queue *q, int fd) {
 }
 
 static struct queue *
-get_queue(lua_State *L) {
+get_queue(lua_State *L)
+{
     struct queue *q = lua_touserdata(L,1);
     if (q == NULL) {
         q = lua_newuserdata(L, sizeof(struct queue));
@@ -131,7 +136,8 @@ get_queue(lua_State *L) {
 }
 
 static void
-expand_queue(lua_State *L, struct queue *q) {
+expand_queue(lua_State *L, struct queue *q)
+{
     struct queue *nq = lua_newuserdata(L, sizeof(struct queue) + q->cap * sizeof(struct netpack));
     nq->cap = q->cap + QUEUESIZE;
     nq->head = 0;
@@ -148,7 +154,8 @@ expand_queue(lua_State *L, struct queue *q) {
 }
 
 static void
-push_data(lua_State *L, int fd, void *buffer, int size, int clone) {
+push_data(lua_State *L, int fd, void *buffer, int size, int clone)
+{
     if (clone) {
         void * tmp = mtask_malloc(size);
         memcpy(tmp, buffer, size);
@@ -167,7 +174,8 @@ push_data(lua_State *L, int fd, void *buffer, int size, int clone) {
 }
 
 static struct uncomplete *
-save_uncomplete(lua_State *L, int fd) {
+save_uncomplete(lua_State *L, int fd)
+{
     struct queue *q = get_queue(L);
     int h = hash_fd(fd);
     struct uncomplete * uc = mtask_malloc(sizeof(struct uncomplete));
@@ -188,7 +196,8 @@ read_size(uint8_t * buffer)
 }
 
 static void
-push_more(lua_State *L, int fd, uint8_t *buffer, int size) {
+push_more(lua_State *L, int fd, uint8_t *buffer, int size)
+{
     if (size == 1) {
         struct uncomplete * uc = save_uncomplete(L, fd);
         uc->read = -1;
@@ -217,7 +226,8 @@ push_more(lua_State *L, int fd, uint8_t *buffer, int size) {
 }
 
 static void
-close_uncomplete(lua_State *L, int fd) {
+close_uncomplete(lua_State *L, int fd)
+{
     struct queue *q = lua_touserdata(L,1);
     struct uncomplete * uc = find_uncomplete(q, fd);
     if (uc) {
@@ -322,7 +332,8 @@ filter_data(lua_State *L, int fd, uint8_t * buffer, int size)
 }
 
 static void
-pushstring(lua_State *L, const char * msg, int size) {
+pushstring(lua_State *L, const char * msg, int size)
+{
     if (msg) {
         lua_pushlstring(L, msg, size);
     } else {
@@ -371,9 +382,12 @@ lfilter(lua_State *L)
             lua_pushinteger(L, message->id);
             return 3;
         case MTASK_SOCKET_TYPE_ACCEPT:
+            // 将字符串 "open" 压栈
             lua_pushvalue(L, lua_upvalueindex(TYPE_OPEN));
             // ignore listen id (message->id);
+            // 将ss->slot的数组下标压栈
             lua_pushinteger(L, message->ud);
+            // 将字符串压栈，这里的字符串其实是 "ip:port" 这样的形式
             pushstring(L, buffer, size);
             return 4;
         case MTASK_SOCKET_TYPE_ERROR:

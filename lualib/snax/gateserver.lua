@@ -21,6 +21,7 @@ function gateserver.openclient(fd)
 end
 
 function gateserver.closeclient(fd)
+	print("gateserver.lua gateserver.closeclient calling")
 	local c = connection[fd]
 	if c then
 		connection[fd] = false
@@ -57,6 +58,7 @@ function gateserver.start(handler)
 	local MSG = {}
 
 	local function dispatch_msg(fd, msg, sz)
+		print("gateserver.lua  dispatch_msg calling")
 		if connection[fd] then
 			handler.message(fd, msg, sz)
 		else
@@ -67,6 +69,7 @@ function gateserver.start(handler)
 	MSG.data = dispatch_msg
 
 	local function dispatch_queue()
+		print("gateserver.lua  dispatch_queue calling")
 		local fd, msg, sz = netpack.pop(queue)
 		if fd then
 			-- may dispatch even the handler.message blocked
@@ -83,12 +86,13 @@ function gateserver.start(handler)
 	MSG.more = dispatch_queue
 
 	function MSG.open(fd, msg)
+		print("gateserver.lua  MSG.open calling")
 		if client_number >= maxclient then
 			socketdriver.close(fd)
 			return
 		end
 		if nodelay then
-			socketdriver.nodelay(fd)
+			socketdriver.nodelay(fd) --会向底层的管道发送一个"T"的消息
 		end
 		connection[fd] = true
 		client_number = client_number + 1
@@ -96,6 +100,7 @@ function gateserver.start(handler)
 	end
 
 	local function close_fd(fd)
+		print("gateserver.lua  close_fd calling")
 		local c = connection[fd]
 		if c ~= nil then
 			connection[fd] = nil
@@ -104,6 +109,7 @@ function gateserver.start(handler)
 	end
 
 	function MSG.close(fd)
+		print("gateserver.lua  MSG.close calling")
 		if fd ~= socket then
 			if handler.disconnect then
 				handler.disconnect(fd)
@@ -115,6 +121,7 @@ function gateserver.start(handler)
 	end
 
 	function MSG.error(fd, msg)
+		print("gateserver.lua  MSG.error calling")
 		if fd == socket then
 			socketdriver.close(fd)
 			mtask.error("gateserver close listen socket, accpet error:",msg)
@@ -127,6 +134,7 @@ function gateserver.start(handler)
 	end
 
 	function MSG.warning(fd, size)
+		print("gateserver.lua  MSG.warning calling")
 		if handler.warning then
 			handler.warning(fd, size)
 		end
