@@ -6,20 +6,20 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define PTYPE_TEXT 0         //文本协议
-#define PTYPE_RESPONSE 1     //response to client with session, session may be packed into package
-#define PTYPE_MULTICAST 2    //组播消息
-#define PTYPE_CLIENT 3       //客户端消息
-#define PTYPE_SYSTEM 4       //协议控制命令
-#define PTYPE_HARBOR 5       //远程消息
-#define PTYPE_SOCKET 6       //socket消息
+#define PTYPE_TEXT              0  //文本协议
+#define PTYPE_RESPONSE          1  //response to client with session, session may be packed into package
+#define PTYPE_MULTICAST         2  //组播消息
+#define PTYPE_CLIENT            3  //客户端消息
+#define PTYPE_SYSTEM            4  //协议控制命令
+#define PTYPE_HARBOR            5  //远程消息
+#define PTYPE_SOCKET            6  //socket消息
 // read lualib/mtask.lua examples/simplemonitor.lua
-#define PTYPE_ERROR 7        //错误
+#define PTYPE_ERROR             7  //错误
 // read lualib/mtask.lua lualib/mqueue.lua lualib/snax.lua
-#define PTYPE_RESERVED_QUEUE 8
-#define PTYPE_RESERVED_DEBUG 9 //调试消息
-#define PTYPE_RESERVED_LUA 10 //Lua 消息
-#define PTYPE_RESERVED_SNAX 11
+#define PTYPE_RESERVED_QUEUE    8
+#define PTYPE_RESERVED_DEBUG    9  //调试消息
+#define PTYPE_RESERVED_LUA      10 //Lua 消息
+#define PTYPE_RESERVED_SNAX     11
 
 #define PTYPE_TAG_DONTCOPY 0x10000
 #define PTYPE_TAG_ALLOCSESSION 0x20000

@@ -1064,6 +1064,7 @@ _ctrl_cmd(struct socket_server *ss, struct socket_message *result)
 static int
 _forward_message_tcp(struct socket_server *ss, struct socket *s, struct socket_message * result)
 {
+    // 先接收预设的字节数,即在new_fd函数中设置的 MIN_READ_BUFFER
 	int sz = s->p.size;
 	char * buffer = MALLOC(sz);
 	int n = (int)read(s->fd, buffer, sz);
@@ -1103,7 +1104,7 @@ _forward_message_tcp(struct socket_server *ss, struct socket *s, struct socket_m
 
 	result->opaque = s->opaque;
 	result->id = s->id;
-	result->ud = n;
+	result->ud = n; // 收到了多少个字节数的网络数据
 	result->data = buffer;
 	return SOCKET_DATA;
 }

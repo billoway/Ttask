@@ -3,14 +3,14 @@
 
 #include <stdint.h>
 
-#define SOCKET_DATA 0     // data 到来
-#define SOCKET_CLOSE 1    // close conn
-#define SOCKET_OPEN 2     // conn ok
-#define SOCKET_ACCEPT 3 //被动连接建立(Accept返回了连接的fd但是未加入epoll来管理)
-#define SOCKET_ERROR 4    // error
-#define SOCKET_EXIT 5     // exit
-#define SOCKET_UDP 6
-#define SOCKET_WARNING 7
+#define SOCKET_DATA         0 // data 到来
+#define SOCKET_CLOSE        1 // close conn
+#define SOCKET_OPEN         2 // conn ok
+#define SOCKET_ACCEPT       3 //被动连接建立(Accept返回了连接的fd但是未加入epoll来管理)
+#define SOCKET_ERROR        4 // error
+#define SOCKET_EXIT         5 // exit
+#define SOCKET_UDP          6
+#define SOCKET_WARNING      7
 
 struct socket_server;
 
