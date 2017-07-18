@@ -36,6 +36,7 @@ mtask.cache = require "mtask.codecache"
 function mtask.register_protocol(class)
     local name = class.name
     local id = class.id
+    print("mtask.register_protocol calling".." name=>"..name.." id=>"..id)
     assert(proto[name] == nil and proto[id] == nil)
     assert(type(name) == "string" and type(id) == "number" and id >=0 and id <=255)
     proto[name] = class

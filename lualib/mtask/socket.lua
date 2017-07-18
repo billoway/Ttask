@@ -4,6 +4,11 @@ local mtask_core = require "mtask.core"
 local assert = assert
 
 --[[
+阻塞模式的 lua API 用于 TCP socket 的读写。
+它是对 C API 的封装(C API 采用异步读写，你可以使用 C 调用，监听一个端口，或发起一个 TCP 连接。
+但具体的操作结果要等待 mtask 的事件回调。
+mtask 会把结果以 PTYPE_SOCKET 类型的消息发送给发起请求的服务)
+
 如果你需要一个网关帮你接入大量连接并转发它们到不同的地方处理。
 service/gate.lua 可以直接使用，同时也是用于了解  socket 模块如何工作的不错的参考。
 它还有一个功能近似的，但是全部用 C 编写的版本 service-src/mtask_service_gate.c 。
@@ -45,7 +50,8 @@ local function suspend(s)
 end
 
 -- read mtask_socket.h for these macro
--- mtask_SOCKET_TYPE_DATA = 1
+-- MTASK_SOCKET_TYPE_DATA = 1
+-- 从远端过来的消息会进入 socket_message[1] 函数进行处理
 socket_message[1] = function(id, size, data)
 	local s = socket_pool[id]
 	if s == nil then
@@ -81,7 +87,9 @@ socket_message[1] = function(id, size, data)
 	end
 end
 
--- mtask_SOCKET_TYPE_CONNECT = 2
+-- 收到此消息以后，调用 wakeup 唤醒 socket.open 中的 connect，connect 会返回。
+-- 所以 socket.open 相当于阻塞模式的connect函数。
+-- MTASK_SOCKET_TYPE_CONNECT = 2
 socket_message[2] = function(id, _ , addr)
 	local s = socket_pool[id]
 	if s == nil then
@@ -159,7 +167,8 @@ socket_message[7] = function(id, size)
 		warning(id, size)
 	end
 end
-
+--其中t是从底层(C 层)的 forward_message 中传递过来的，是一个枚举变量(从1-7)，
+--也就是说调用的socket.lua的服务都会注册这样一个"socket"类型的消息处理函数。
 mtask.register_protocol {
 	name = "socket",
 	id = mtask.PTYPE_SOCKET,	-- PTYPE_SOCKET = 6
@@ -170,6 +179,8 @@ mtask.register_protocol {
 }
 -- 初始化 buffer，创建 socket_pool 对应的 id 结构
 -- 会阻塞，然后等相应的动作完成后才能返回
+-- connect函数会创建一个table对应每个socket描述符，此table里面会有一个 callback. 
+-- suspend 函数顾名思义会挂起正在执行的协程。
 local function connect(id, func)
 	local newbuffer
 	if func == nil then
@@ -198,12 +209,15 @@ local function connect(id, func)
 	end
 end
 --  主动连接， 建立一个 TCP 连接。返回一个数字 id 。
+-- driver.connect 函数在底层会向管道发送一个 'O' 的命令，然后挂起当前的协程；
+-- 管道的读端收到 'O' 后会调用 connect 函数主动与远端连接，如果连接建立成功，会收到"socket"类型的消息(forward_message)， 消息处理函数中的 t 为 MTASK_SOCKET_TYPE_CONNECT
 function socket.open(addr, port)
-	local id = driver.connect(addr,port)
 	-- 此函数在底层会向管道发送一个 'O' 的命令，管道的读端收到 'O' 后会调用 connect 函数主动与远端建立起连接
+	local id = driver.connect(addr,port)
 	return connect(id)
 end
 -- 将操作系统的句柄交给底层的 epoll|kqueue 来管理，有数据来了也走 socket 那一套
+-- driver.bind 会向管道发送一个 "B"，管道的读端收到后:
 function socket.bind(os_fd)
 	local id = driver.bind(os_fd)
 	return connect(id)

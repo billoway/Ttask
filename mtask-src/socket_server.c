@@ -1376,7 +1376,8 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
                     // close when error
                     int error;
                     socklen_t len = sizeof(error);  
-                    int code = getsockopt(s->fd, SOL_SOCKET, SO_ERROR, &error, &len);  
+                    int code = getsockopt(s->fd, SOL_SOCKET, SO_ERROR, &error, &len);
+                    _force_close(ss, s, result);
                     if (code < 0) {
                         result->data = strerror(errno);
                     } else if (error != 0) {
@@ -1384,7 +1385,6 @@ socket_server_poll(struct socket_server *ss, struct socket_message * result, int
                     } else {
                         result->data = "Unknown error";
                     }
-                    _force_close(ss, s, result);
                     return SOCKET_ERROR;
                 }
                 break;
