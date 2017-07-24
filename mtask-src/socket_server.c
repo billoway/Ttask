@@ -20,17 +20,17 @@
 #define MAX_INFO 128
 // MAX_SOCKET will be 2^MAX_SOCKET_P
 #define MAX_SOCKET_P            16
-#define MAX_EVENT               64    // 用于epoll_wait的第三个参数 每次返回事件的多少
-#define MIN_READ_BUFFER         64 // 最小分配的读缓冲大小 为了减少read的调用 尽可能分配大的读缓冲区
-#define SOCKET_TYPE_INVALID     0   // 无效的sock fd
-#define SOCKET_TYPE_RESERVE     1   // 预留已经被申请 即将被使用
-#define SOCKET_TYPE_PLISTEN     2   // listen fd但是未加入epoll管理
-#define SOCKET_TYPE_LISTEN      3    // 监听到套接字已经加入epoll管理
-#define SOCKET_TYPE_CONNECTING  4 //尝试连接的socket fd
-#define SOCKET_TYPE_CONNECTED   5//已经建立连接的socket 主动conn或者被动accept的套接字 已经加入epoll管理
-#define SOCKET_TYPE_HALFCLOSE   6   //已经在应用层关闭了fd 但是数据还没有发送完 还没有close
-#define SOCKET_TYPE_PACCEPT     7  //accept返回的fd 未加入epoll
-#define SOCKET_TYPE_BIND        8  // 其他类型的fd 如 stdin stdout等
+#define MAX_EVENT               64// 用于epoll_wait的第三个参数 每次返回事件的多少
+#define MIN_READ_BUFFER         64// 最小分配的读缓冲大小 为了减少read的调用 尽可能分配大的读缓冲区
+#define SOCKET_TYPE_INVALID     0// 无效的sock fd
+#define SOCKET_TYPE_RESERVE     1// 预留已经被申请 即将被使用
+#define SOCKET_TYPE_PLISTEN     2// listen fd但是未加入epoll管理
+#define SOCKET_TYPE_LISTEN      3// 监听到套接字已经加入epoll管理
+#define SOCKET_TYPE_CONNECTING  4// 尝试连接的socket fd
+#define SOCKET_TYPE_CONNECTED   5// 已经建立连接的socket 主动conn或者被动accept的套接字 已经加入epoll管理
+#define SOCKET_TYPE_HALFCLOSE   6// 已经在应用层关闭了fd 但是数据还没有发送完还没有close
+#define SOCKET_TYPE_PACCEPT     7//accept返回的fd 未加入epoll
+#define SOCKET_TYPE_BIND        8// 其他类型的fd 如 stdin stdout等
 
 #define MAX_SOCKET (1<<MAX_SOCKET_P)    // 1 << 16 -> 64K
 
@@ -103,11 +103,11 @@ struct socket_server {
     int event_n;         // epoll_wait 返回的事件数
     int event_index;     // 当前处理的事件序号
     struct socket_object_interface soi;
-    struct event ev[MAX_EVENT];      // epoll_wait返回的事件集
-    struct socket slot[MAX_SOCKET];  // 应用层预先分配的socket
+    struct event ev[MAX_EVENT];      // 与描述符对应的事件(包括socket、read、write)
+    struct socket slot[MAX_SOCKET];  // 与描述符对应的数据，用于标识自定义的数据
     char buffer[MAX_INFO];           // 临时数据的保存 比如保存对等方的地址信息等
     uint8_t udpbuffer[MAX_UDP_PACKAGE];
-    fd_set rfds;                     // 用于select的fd集
+    fd_set rfds;                     // 给select使用,主要用来检查是否有本地cmd从管道过来
 };
 
 // 以下结构用于控制包体结构

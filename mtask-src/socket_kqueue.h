@@ -17,7 +17,8 @@ sp_invalid(int kfd)
 {
 	return kfd == -1;
 }
-//生成kqueue专用的文件描述符。是在内核申请一空间，存放关注的socket fd上是否发生以及发生了什么事件。
+//生成kqueue专用的文件描述符。
+//是在内核申请一空间，存放关注的socket fd上是否发生以及发生了什么事件。
 static int
 sp_create()
 {

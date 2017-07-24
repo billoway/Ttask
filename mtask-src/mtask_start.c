@@ -67,6 +67,7 @@ wakeup(struct monitor *m, int busy)
 static void *
 thread_socket(void *p)
 {
+    pthread_setname_np("thread_socket");
 	struct monitor * m = p; //接入monitor结构
 	mtask_initthread(THREAD_SOCKET);//设置线程局部存储 G_NODE.handle_key 为 THREAD_SOCKET
     //检测网络事件（epoll管理的网络事件）并且将事件放入消息队列 mtask_socket_poll--->mtask_context_push
@@ -101,6 +102,8 @@ free_monitor(struct monitor *m)
 static void *
 thread_monitor(void *p)
 {
+    pthread_setname_np("thread_monitor");
+
 	struct monitor * m = p;
 	int i;
 	int n = m->count;
@@ -136,6 +139,7 @@ signal_hup()
 static void *
 thread_timer(void *p)
 {
+    pthread_setname_np("thread_timer");
 	struct monitor * m = p;
 	mtask_initthread(THREAD_TIMER);
 	for (;;) {
@@ -219,6 +223,7 @@ start(int thread)
 	create_thread(&pid[0], thread_monitor, m);
 	create_thread(&pid[1], thread_timer, m);
 	create_thread(&pid[2], thread_socket, m);
+    
     //每个服务都有一个权重
     //权重为-1为只处理一条消息
     //权重为0就将此服务的所有消息处理完
