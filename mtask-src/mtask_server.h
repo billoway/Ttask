@@ -32,11 +32,11 @@ void mtask_context_dispatchall(struct mtask_context * context);
 // for monitor
 void mtask_context_endless(uint32_t handle);
 //初始化节点结构mtask_node G_NODE
-void mtask_globalinit(void);
+void mtask_global_init(void);
 
-void mtask_globalexit(void);
+void mtask_global_exit(void);
 
-void mtask_initthread(int m);
+void mtask_thread_init(int m);
 
 void mtask_profile_enable(int enable);
 

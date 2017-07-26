@@ -62,6 +62,6 @@ mtask.start(function()
 	end
 
 	db:disconnect()
---	mtask.exit()
+	mtask.exit()
 end)
 

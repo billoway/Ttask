@@ -136,7 +136,7 @@ main(int argc, char *argv[])
 		return 1;
 	}
     luaS_initshr();
-	mtask_globalinit(); //初始化mtask_node  G_NODE 结构设置线程局部存储值为main_thread
+	mtask_global_init(); //初始化mtask_node  G_NODE 结构设置线程局部存储值为main_thread
 	mtask_env_init();   //初始化mtask_env   E      new 了一个lua_state(虚拟机)
  
 	sigign();           //忽略signpipe信号
@@ -170,7 +170,7 @@ main(int argc, char *argv[])
 	lua_close(L);//关闭掉新创建的lua_state
 
 	mtask_start(&config);//启动 mtask
-	mtask_globalexit(); //设置G_NODE 中线程局部存储的key （删除pthread_key）
+	mtask_global_exit(); //设置G_NODE 中线程局部存储的key （删除pthread_key）
     luaS_exitshr();
     
 	return 0;

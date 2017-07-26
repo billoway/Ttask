@@ -885,7 +885,7 @@ mtask_context_send(struct mtask_context * ctx, void * msg, size_t sz, uint32_t s
 }
 //初始化mtask_node 创建线程局部存储key
 void 
-mtask_globalinit(void)
+mtask_global_init(void)
 {
 	G_NODE.total = 0;
 	G_NODE.monitor_exit = 0;
@@ -895,17 +895,17 @@ mtask_globalinit(void)
 		exit(1);
 	}
 	// set mainthread's key
-	mtask_initthread(THREAD_MAIN);
+	mtask_thread_init(THREAD_MAIN);
 }
 
 void 
-mtask_globalexit(void)
+mtask_global_exit(void)
 {
 	pthread_key_delete(G_NODE.handle_key);//删除线程局部存储的key
 }
  //设置线程局部存储key
 void
-mtask_initthread(int m)
+mtask_thread_init(int m)
 {
 	uintptr_t v = (uint32_t)(-m);
 	pthread_setspecific(G_NODE.handle_key, (void *)v);

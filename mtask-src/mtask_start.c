@@ -69,7 +69,7 @@ thread_socket(void *p)
 {
     pthread_setname_np("thread_socket");
 	struct monitor * m = p; //接入monitor结构
-	mtask_initthread(THREAD_SOCKET);//设置线程局部存储 G_NODE.handle_key 为 THREAD_SOCKET
+	mtask_thread_init(THREAD_SOCKET);//设置线程局部存储 G_NODE.handle_key 为 THREAD_SOCKET
     //检测网络事件（epoll管理的网络事件）并且将事件放入消息队列 mtask_socket_poll--->mtask_context_push
 	for (;;) {
 		int r = mtask_socket_poll();
@@ -107,7 +107,7 @@ thread_monitor(void *p)
 	struct monitor * m = p;
 	int i;
 	int n = m->count;
-	mtask_initthread(THREAD_MONITOR);
+	mtask_thread_init(THREAD_MONITOR);
 	for (;;) {
 		CHECK_ABORT
 		for (i=0;i<n;i++) {//遍历监视列表
@@ -141,7 +141,7 @@ thread_timer(void *p)
 {
     pthread_setname_np("thread_timer");
 	struct monitor * m = p;
-	mtask_initthread(THREAD_TIMER);
+	mtask_thread_init(THREAD_TIMER);
 	for (;;) {
 		mtask_updatetime();//更新 定时器 的时间
 		CHECK_ABORT
@@ -172,7 +172,7 @@ thread_worker(void *p)
 	int weight = wp->weight;
 	struct monitor *m = wp->m;
 	struct mtask_monitor *sm = m->m[id];//通过线程id拿到监视器结构（mtask_monitor）
-	mtask_initthread(THREAD_WORKER);
+	mtask_thread_init(THREAD_WORKER);
 	struct message_queue * q = NULL;
 	while (!m->quit) {
         //消息调度执行（取出消息 执行服务中的回调函数）每个服务都有一个权重
