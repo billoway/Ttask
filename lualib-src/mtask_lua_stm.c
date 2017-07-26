@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "rwlock.h"
+#include "mtask_rwlock.h"
 #include "mtask_malloc.h"
 #include "mtask_atomic.h"
 

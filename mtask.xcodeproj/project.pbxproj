@@ -64,7 +64,6 @@
 
 /* Begin PBXFileReference section */
 		7929B57C1B874FDE00780961 /* mtask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mtask.h; sourceTree = "<group>"; };
-		79678BBB1F0CC65400B4334A /* examples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = examples; sourceTree = SOURCE_ROOT; };
 		79678BBD1F0CC78400B4334A /* liblua.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = liblua.a; path = 3rd/lua/liblua.a; sourceTree = "<group>"; };
 		79678BC01F0CC7A400B4334A /* lsha1.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = lsha1.c; sourceTree = "<group>"; };
 		79678BC11F0CC7A400B4334A /* mtask_lua_bson.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mtask_lua_bson.c; sourceTree = "<group>"; };
@@ -88,9 +87,6 @@
 		79678BD41F0CC7A400B4334A /* msvcint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = msvcint.h; sourceTree = "<group>"; };
 		79678BD51F0CC7A400B4334A /* sproto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sproto.c; sourceTree = "<group>"; };
 		79678BD61F0CC7A400B4334A /* sproto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sproto.h; sourceTree = "<group>"; };
-		79678BF71F0CCC7800B4334A /* test */ = {isa = PBXFileReference; lastKnownFileType = folder; path = test; sourceTree = SOURCE_ROOT; };
-		79678BF81F0CCC7800B4334A /* service */ = {isa = PBXFileReference; lastKnownFileType = folder; path = service; sourceTree = SOURCE_ROOT; };
-		79678BF91F0CCC7800B4334A /* lualib */ = {isa = PBXFileReference; lastKnownFileType = folder; path = lualib; sourceTree = SOURCE_ROOT; };
 		799665621B859D5E00D3865E /* mtask_atomic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mtask_atomic.h; sourceTree = "<group>"; };
 		799665631B85A5A300D3865E /* mtask_spinlock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mtask_spinlock.h; sourceTree = "<group>"; };
 		79A8FDA11F0DCADD00C35938 /* databuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = databuffer.h; sourceTree = "<group>"; };
@@ -131,7 +127,7 @@
 		79DCE8C51B78F31D002427E5 /* mtask_start.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mtask_start.c; sourceTree = "<group>"; };
 		79DCE8C61B78F31D002427E5 /* mtask_timer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = mtask_timer.c; sourceTree = "<group>"; };
 		79DCE8C71B78F31D002427E5 /* mtask_timer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mtask_timer.h; sourceTree = "<group>"; };
-		79DCE8C81B78F31D002427E5 /* rwlock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rwlock.h; sourceTree = "<group>"; };
+		79DCE8C81B78F31D002427E5 /* mtask_rwlock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mtask_rwlock.h; sourceTree = "<group>"; };
 		79DCE8C91B78F31D002427E5 /* socket_kqueue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socket_kqueue.h; sourceTree = "<group>"; };
 		79DCE8CA1B78F31D002427E5 /* socket_poll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socket_poll.h; sourceTree = "<group>"; };
 		79DCE8CB1B78F31D002427E5 /* socket_server.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = socket_server.c; sourceTree = "<group>"; };
@@ -230,10 +226,6 @@
 		79CED6A91B6B140D00378C7E /* mtask */ = {
 			isa = PBXGroup;
 			children = (
-				79678BBB1F0CC65400B4334A /* examples */,
-				79678BF71F0CCC7800B4334A /* test */,
-				79678BF81F0CCC7800B4334A /* service */,
-				79678BF91F0CCC7800B4334A /* lualib */,
 				79A8FDA01F0DCADD00C35938 /* service-src */,
 				79678BBF1F0CC7A400B4334A /* lualib-src */,
 				79DCE8A91B78F31D002427E5 /* mtask-src */,
@@ -273,7 +265,7 @@
 				79DCE8C51B78F31D002427E5 /* mtask_start.c */,
 				79DCE8C61B78F31D002427E5 /* mtask_timer.c */,
 				79DCE8C71B78F31D002427E5 /* mtask_timer.h */,
-				79DCE8C81B78F31D002427E5 /* rwlock.h */,
+				79DCE8C81B78F31D002427E5 /* mtask_rwlock.h */,
 				79DCE8C91B78F31D002427E5 /* socket_kqueue.h */,
 				79DCE8CA1B78F31D002427E5 /* socket_poll.h */,
 				79F4E57C1B874076001B1C9B /* socket_epoll.h */,
