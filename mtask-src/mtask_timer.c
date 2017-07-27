@@ -288,7 +288,7 @@ gettime()
 }
 //mtask 定时器更新 在定时器线程中每隔2500微妙调用一次
 void
-mtask_updatetime(void)
+mtask_time_update(void)
 {
     uint64_t cp = gettime(); //获取当前时间
     if(cp < TI->current_point) {
@@ -306,7 +306,7 @@ mtask_updatetime(void)
 }
 //开机时间
 uint32_t
-mtask_starttime(void)
+mtask_time_start(void)
 {
     return TI->starttime;
 }
@@ -333,7 +333,7 @@ mtask_timer_init(void)
 #define MICROSEC 1000000
 
 uint64_t
-mtask_thread_time(void)
+mtask_time_thread(void)
 {
 #if  !defined(__APPLE__)
     struct timespec ti;

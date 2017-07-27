@@ -17,7 +17,7 @@ mtask_log_open(struct mtask_context * ctx, uint32_t handle)
     sprintf(tmp, "%s/%08x.log", logpath, handle);
     FILE *f = fopen(tmp, "ab");
     if (f) {
-        uint32_t starttime = mtask_starttime();
+        uint32_t starttime = mtask_time_start();
         uint64_t currenttime = mtask_now();
         time_t ti = starttime + currenttime/100;
         mtask_error(ctx, "Open log file %s", tmp);

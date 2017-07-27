@@ -313,9 +313,9 @@ dispatch_message(struct mtask_context *ctx, struct mtask_message *msg)
     
     int reserve_msg;
     if (ctx->profile) { //有性能开关 则计时处理  调度执行服务模块中的回调函数
-        ctx->cpu_start = mtask_thread_time();
+        ctx->cpu_start = mtask_time_thread();
         reserve_msg = ctx->cb(ctx, ctx->cb_ud, type, msg->session, msg->source, msg->data, sz);
-        uint64_t cost_time = mtask_thread_time() - ctx->cpu_start;
+        uint64_t cost_time = mtask_time_thread() - ctx->cpu_start;
         ctx->cpu_cost += cost_time;
     } else {
         reserve_msg = ctx->cb(ctx, ctx->cb_ud, type, msg->session, msg->source, msg->data, sz);
@@ -587,7 +587,7 @@ cmd_setenv(struct mtask_context * context, const char * param)
 static const char *
 cmd_starttime(struct mtask_context * context, const char * param)
 {
-	uint32_t sec = mtask_starttime();
+	uint32_t sec = mtask_time_start();
 	sprintf(context->result,"%u",sec);
 	return context->result;
 }
@@ -635,7 +635,7 @@ cmd_stat(struct mtask_context * context, const char * param)
         sprintf(context->result, "%lf", t);
     } else if (strcmp(param, "time") == 0) {
         if (context->profile) {
-            uint64_t ti = mtask_thread_time() - context->cpu_start;
+            uint64_t ti = mtask_time_thread() - context->cpu_start;
             double t = (double)ti / 1000000.0;	// microsec
             sprintf(context->result, "%lf", t);
         } else {

@@ -143,7 +143,7 @@ thread_timer(void *p)
 	struct monitor * m = p;
 	mtask_thread_init(THREAD_TIMER);
 	for (;;) {
-		mtask_updatetime();//更新 定时器 的时间
+		mtask_time_update();//更新 定时器 的时间
 		CHECK_ABORT
 		wakeup(m,m->count-1);//只要有一个线程睡眠就唤醒 让工作线程动起来
 		usleep(2500);//睡眠2500微妙（1秒=1000000微秒）0.025秒
