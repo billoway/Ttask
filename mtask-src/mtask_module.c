@@ -17,7 +17,7 @@ struct modules {
 	int count;              //已加载模块的数量
 	spinlock_t lock;   //互斥锁
 	const char * path;      //模块路径
-	struct mtask_module m[MAX_MODULE_TYPE];//模块数组
+	mtask_module_t m[MAX_MODULE_TYPE];//模块数组
 };
 
 static struct modules * M = NULL;
@@ -66,7 +66,7 @@ _try_open(struct modules *m, const char * name)
 	return dl;
 }
 //根据文件名查找动态库的句柄
-static struct mtask_module *
+static mtask_module_t *
 _query(const char * name)
 {
 	int i;
@@ -79,7 +79,7 @@ _query(const char * name)
 }
 
 static void *
-get_api(struct mtask_module *mod, const char *api_name)
+get_api(mtask_module_t *mod, const char *api_name)
 {
     size_t name_size = strlen(mod->name);
     size_t api_size = strlen(api_name);
@@ -98,7 +98,7 @@ get_api(struct mtask_module *mod, const char *api_name)
 //使用dlsym查找so中的xxx_create xxx_init xxx_release xxx_signal 函数的指针
 // dlsym() 根据动态链接库操作句柄与符号，返回符号对应的地址。
 static int
-_open_sym(struct mtask_module *mod)
+_open_sym(mtask_module_t *mod)
 {
     mod->create = get_api(mod, "_create");
     mod->init = get_api(mod, "_init");
@@ -108,10 +108,10 @@ _open_sym(struct mtask_module *mod)
 	return mod->init == NULL;
 }
 //根据模块名找模块 mtask_module* 结构，如果不存在则加载so
-struct mtask_module *
+mtask_module_t *
 mtask_module_query(const char * name)
 {
-	struct mtask_module * result = _query(name);
+	mtask_module_t * result = _query(name);
 	if (result)
 		return result;
 
@@ -140,11 +140,11 @@ mtask_module_query(const char * name)
 }
 
 void 
-mtask_module_insert(struct mtask_module *mod)
+mtask_module_insert(mtask_module_t *mod)
 {
 	SPIN_LOCK(M)
 
-	struct mtask_module * m = _query(mod->name);
+	mtask_module_t * m = _query(mod->name);
 	assert(m == NULL && M->count < MAX_MODULE_TYPE);
 	int index = M->count;
 	M->m[index] = *mod;
@@ -156,7 +156,7 @@ mtask_module_insert(struct mtask_module *mod)
 // C99规定intptr_t可以保存指针值，因而将(~0)先转为intptr_t再转为void*
 //一个合法的 module 允许没有 create 这个 api,只有非 NULL 才是合法的 module 对象。
 void * 
-mtask_module_instance_create(struct mtask_module *m)
+mtask_module_instance_create(mtask_module_t *m)
 {
 	if (m->create) {
 		return m->create();
@@ -166,14 +166,14 @@ mtask_module_instance_create(struct mtask_module *m)
 }
 
 int
-mtask_module_instance_init(struct mtask_module *m, void * inst,
+mtask_module_instance_init(mtask_module_t *m, void * inst,
                            mtask_context_t *ctx, const char * parm)
 {
 	return m->init(inst, ctx, parm);
 }
 
 void 
-mtask_module_instance_release(struct mtask_module *m, void *inst)
+mtask_module_instance_release(mtask_module_t *m, void *inst)
 {
 	if (m->release) {
 		m->release(inst);
@@ -181,7 +181,7 @@ mtask_module_instance_release(struct mtask_module *m, void *inst)
 }
 
 void
-mtask_module_instance_signal(struct mtask_module *m, void *inst, int signal)
+mtask_module_instance_signal(mtask_module_t *m, void *inst, int signal)
 {
 	if (m->signal) {
 		m->signal(inst, signal);

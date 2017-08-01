@@ -48,7 +48,7 @@ log_blob(FILE *f, void * buffer, size_t sz)
 }
 
 static void
-log_socket(FILE * f, struct mtask_socket_message * message, size_t sz)
+log_socket(FILE * f, mtask_socket_message_t * message, size_t sz)
 {
     fprintf(f, "[socket] %d %d %d ", message->type, message->id, message->ud);
     

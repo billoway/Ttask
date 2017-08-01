@@ -76,7 +76,7 @@ if (kevent(kfd, &ke, 1, NULL, 0, NULL) == -1 || ke.flags & EV_ERROR) {
 }
 //kevent ev:用于回传待处理事件的数组；
 static int 
-sp_wait(int kfd, struct event *e, int max)
+sp_wait(int kfd, event_t *e, int max)
 {
 	struct kevent ev[max];
 	int n = kevent(kfd, NULL, 0, ev, max, NULL);//等待事件触发，当超过timeout还没有事件触发时，就超时 返回事件数量和事件集合

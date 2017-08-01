@@ -5,12 +5,14 @@
 
 typedef int poll_fd;
 
-struct event {
+struct event_s {
     void * s;      //指向struct socket
     bool read;     //此标志为true时，表示有数据可读  在sp_wait中置位
     bool write;    //此标志为false时，表示有数据可读 在sp_wait中置位
 	bool error;
 };
+
+typedef struct event_s event_t;
 
 static bool sp_invalid(poll_fd fd);
 
@@ -24,7 +26,7 @@ static void sp_del(poll_fd fd, int sock);
 
 static void sp_write(poll_fd, int sock, void *ud, bool enable);
 
-static int sp_wait(poll_fd, struct event *e, int max);
+static int sp_wait(poll_fd, event_t *e, int max);
 
 static void sp_nonblocking(int sock);
 

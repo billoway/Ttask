@@ -218,7 +218,7 @@ dispatch_message(struct gate *g, struct connection *c, int id, void * data, int 
 }
 
 static void
-dispatch_socket_message(struct gate *g, const struct mtask_socket_message * message, int sz)
+dispatch_socket_message(struct gate *g, const mtask_socket_message_t * message, int sz)
 {
     mtask_context_t * ctx = g->ctx;
     switch(message->type) {
@@ -310,7 +310,7 @@ _cb(mtask_context_t * ctx, void * ud, int type, int session, uint32_t source, co
         }
         case PTYPE_SOCKET:
             // recv socket message from mtask_socket
-            dispatch_socket_message(g, msg, (int)(sz-sizeof(struct mtask_socket_message)));
+            dispatch_socket_message(g, msg, (int)(sz-sizeof(mtask_socket_message_t)));
             break;
     }
     return 0;

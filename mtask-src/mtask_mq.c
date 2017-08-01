@@ -36,18 +36,20 @@ struct message_queue_s {
 };
 
 //全局消息队列链表 其中保存了非空的各个服务的消息队列message_queue
-struct global_queue {
+struct global_queue_s {
     message_queue_t *head;
     message_queue_t *tail;
     spinlock_t lock;
 };
+
+typedef struct global_queue_s global_queue_t;
 //全局队列的指针变量
-static struct global_queue *Q = NULL;
+static global_queue_t *Q = NULL;
 //消息队列挂在全局消息队列(链表)的尾部
 void
 mtask_globalmq_push(message_queue_t * queue)
 {
-	struct global_queue *q = Q;
+	global_queue_t *q = Q;
 
 	SPIN_LOCK(q)
 	assert(queue->next == NULL);
@@ -63,7 +65,7 @@ mtask_globalmq_push(message_queue_t * queue)
 message_queue_t *
 mtask_globalmq_pop()
 {
-	struct global_queue *q = Q;
+	global_queue_t *q = Q;
 
 	SPIN_LOCK(q)
 	message_queue_t *mq = q->head;
@@ -227,7 +229,7 @@ mtask_mq_push(message_queue_t *q, mtask_message_t *message)
 void
 mtask_mq_init()
 {
-	struct global_queue *q = mtask_malloc(sizeof(*q));
+	global_queue_t *q = mtask_malloc(sizeof(*q));
 	memset(q,0,sizeof(*q));
 	SPIN_INIT(q);
 	Q = q;

@@ -383,7 +383,7 @@ lstr2p(lua_State *L) {
  */
 static int
 lunpack(lua_State *L) {
-    struct mtask_socket_message *message = lua_touserdata(L,1);
+    mtask_socket_message_t *message = lua_touserdata(L,1);
     int size = (int)luaL_checkinteger(L,2);
     
     lua_pushinteger(L, message->type);

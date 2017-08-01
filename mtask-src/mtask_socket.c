@@ -11,7 +11,7 @@
 #include "socket_server.h"
 #include "mtask_socket.h"
 
-static struct socket_server * SOCKET_SERVER = NULL;
+static socket_server_t * SOCKET_SERVER = NULL;
 
 void 
 mtask_socket_init()
@@ -34,9 +34,9 @@ mtask_socket_free()
 
 // mainloop thread 将数据压入相应服务的消息队列
 static void
-forward_message(int type, bool padding, struct socket_message * result)
+forward_message(int type, bool padding, socket_message_t * result)
 {
-    struct mtask_socket_message *sm;
+    mtask_socket_message_t *sm;
     size_t sz = sizeof(*sm);
     if (padding) {
         if (result->data) {
@@ -49,7 +49,7 @@ forward_message(int type, bool padding, struct socket_message * result)
             result->data = "";
         }
     }
-    sm = (struct mtask_socket_message *)mtask_malloc(sz);
+    sm = (mtask_socket_message_t *)mtask_malloc(sz);
     sm->type = type;
     sm->id = result->id;
     sm->ud = result->ud;
@@ -77,9 +77,9 @@ forward_message(int type, bool padding, struct socket_message * result)
 int 
 mtask_socket_poll()
 {
-	struct socket_server *ss = SOCKET_SERVER;
+	socket_server_t *ss = SOCKET_SERVER;
 	assert(ss);
-	struct socket_message result;
+	socket_message_t result;
 	int more = 1;
     //检测socket事件
 	int type = socket_server_poll(ss, &result, &more);
@@ -202,12 +202,12 @@ mtask_socket_udp_send(mtask_context_t *ctx, int id, const char * address, const 
 }
 
 const char *
-mtask_socket_udp_address(struct mtask_socket_message *msg, int *addrsz)
+mtask_socket_udp_address(mtask_socket_message_t *msg, int *addrsz)
 {
 	if (msg->type != MTASK_SOCKET_TYPE_UDP) {
 		return NULL;
 	}
-	struct socket_message sm;
+	socket_message_t sm;
 	sm.id = msg->id;
 	sm.opaque = 0;
 	sm.ud = msg->ud;

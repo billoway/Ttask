@@ -50,7 +50,7 @@
 //每一个服务对应的 mtask_ctx 结构 mtask上下文结构
 struct mtask_context_s {
 	void * instance;          //模块实例化句柄 模块xxx_create函数返回的实例 对应 模块的句柄
-	struct mtask_module * mod;//模块结构 保存模块（so）句柄和 函数指针
+	mtask_module_t * mod;//模块结构 保存模块（so）句柄和 函数指针
 	void * cb_ud;           //mtask_callback 设置的服务的lua_state
 	mtask_cb cb;            //mtask_callback 设置过来的消息处理回调函数
 	message_queue_t *queue; //消息队列
@@ -138,7 +138,7 @@ drop_message(mtask_message_t *msg, void *ud)
 }
 /*******************************************************************
  创建一个C服务，步骤如下:
-	1.打开动态连接库，返回一个struct mtask_module
+	1.打开动态连接库，返回一个mtask_module_t
 	2.调用xxx_create创建一个实例
 	3.调用 mtask_handle_register 将服务的结构体:mtask_context_t 注册到 mtask_handle.c 中统一进行管理
 	4.创建服务的消息队列
@@ -149,7 +149,7 @@ mtask_context_t *
 mtask_context_new(const char * name, const char *param)
 {
     //查询模块数组，找到则直接返回模块结构的指针 没有找到则打开文件进行dlopen加载 同时dlsym找到函数指针 生成mtask_module结构 放入M管理
-	struct mtask_module * mod = mtask_module_query(name);
+	mtask_module_t * mod = mtask_module_query(name);
 
 	if (mod == NULL)
 		return NULL;

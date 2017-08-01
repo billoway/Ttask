@@ -11,12 +11,14 @@
 #define MTASK_SOCKET_TYPE_UDP       6
 #define MTASK_SOCKET_TYPE_WARNING   7
 
-struct mtask_socket_message {
+struct mtask_socket_message_s {
     int type; //消息类型
     int id;   //id
     int ud;
     char * buffer; //数据
 };
+
+typedef struct mtask_socket_message_s mtask_socket_message_t;
 //初始化socket
 void mtask_socket_init();
 //退出
@@ -51,6 +53,6 @@ int mtask_socket_udp_connect(mtask_context_t *ctx, int id, const char * addr, in
 
 int mtask_socket_udp_send(mtask_context_t *ctx, int id, const char * address, const void *buffer, int sz);
 
-const char * mtask_socket_udp_address(struct mtask_socket_message *, int *addrsz);
+const char * mtask_socket_udp_address(mtask_socket_message_t *, int *addrsz);
 
 #endif

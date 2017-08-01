@@ -434,7 +434,7 @@ dispatch_queue(struct harbor *h, int id)
 }
 
 static void
-push_socket_data(struct harbor *h, const struct mtask_socket_message * message)
+push_socket_data(struct harbor *h, const mtask_socket_message_t * message)
 {
 	assert(message->type == MTASK_SOCKET_TYPE_DATA);
 	int fd = message->id;
@@ -691,7 +691,7 @@ mainloop(mtask_context_t * context, void * ud, int type, int session, uint32_t s
 	struct harbor * h = ud;
 	switch (type) {
         case PTYPE_SOCKET: {
-            const struct mtask_socket_message * message = msg;
+            const mtask_socket_message_t * message = msg;
             switch(message->type) {
             case MTASK_SOCKET_TYPE_DATA:
                 push_socket_data(h, message);

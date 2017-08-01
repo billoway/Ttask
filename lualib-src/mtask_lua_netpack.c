@@ -354,7 +354,7 @@ pushstring(lua_State *L, const char * msg, int size)
 static int
 lfilter(lua_State *L)
 {
-    struct mtask_socket_message *message = lua_touserdata(L,2);
+    mtask_socket_message_t *message = lua_touserdata(L,2);
     int size = (int)luaL_checkinteger(L,3);
     char * buffer = message->buffer;
     if (buffer == NULL) {

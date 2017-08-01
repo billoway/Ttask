@@ -63,7 +63,7 @@ sp_write(int efd, int sock, void *ud, bool enable)
 //timeout:等待I/O事件发生的超时值(单位我也不太清楚);-1相当于阻塞,0相当于非阻塞。一般用-1即可
 
 static int
-sp_wait(int efd, struct event *e, int max)
+sp_wait(int efd, event_t *e, int max)
 {
 	struct epoll_event ev[max];
 	int n = epoll_wait(efd , ev, max, -1);//等待事件触发，当超过timeout还没有事件触发时，就超时 返回事件数量和事件集合
