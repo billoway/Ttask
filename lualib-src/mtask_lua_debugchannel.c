@@ -16,7 +16,7 @@ struct command {
 };
 
 struct channel {
-    struct spinlock lock;
+    spinlock_t lock;
     int ref;
     struct command * head;
     struct command * tail;

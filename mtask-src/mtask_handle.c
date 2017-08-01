@@ -22,7 +22,7 @@ struct handle_name {
 // 存储name和handle的对应关系
 // 通过handle便可获取mtask_context
 struct handle_storage {
-	struct rwlock lock; //读写锁
+	rwlock_t lock; //读写锁
 
 	uint32_t harbor;    //服务所属harbor id; harbor用于不同主机间通信
 	uint32_t handle_index;//服务索引

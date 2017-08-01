@@ -9,7 +9,7 @@
 
 //mtask 环境保存lua虚拟机
 struct mtask_env {
-	struct spinlock lock; //互斥锁
+	spinlock_t lock; //互斥锁
 	lua_State *L;         //lua VM
 };
 // mtask 环境配置 主要是获取和设置lua的环境变量

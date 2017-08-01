@@ -27,6 +27,7 @@
 //每一个服务对应的 mtask_ctx 结构 mtask上下文结构
 typedef struct mtask_context_s mtask_context_t;
 
+
 void mtask_error(mtask_context_t * context, const char *msg, ...);
 // * mtask 提供了一个叫做 mtask_command 的 C API ，作为基础服务的统一入口。
 const char * mtask_command(mtask_context_t * context, const char * cmd , const char * parm);

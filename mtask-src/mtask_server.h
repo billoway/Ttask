@@ -24,7 +24,7 @@ void mtask_context_send(mtask_context_t * context, void * msg, size_t sz, uint32
 
 int mtask_context_newsession(mtask_context_t *);
 // return next queue
-struct message_queue * mtask_context_message_dispatch(mtask_monitor_t *, struct message_queue *, int weight);
+message_queue_t * mtask_context_message_dispatch(mtask_monitor_t *, message_queue_t *, int weight);
 
 int mtask_context_total();
 // for mtask_error output before exit

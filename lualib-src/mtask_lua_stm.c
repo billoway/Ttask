@@ -12,7 +12,7 @@
 #include "mtask_atomic.h"
 
 struct stm_object {
-    struct rwlock lock;
+    rwlock_t lock;
     int reference;
     struct stm_copy * copy;
 };

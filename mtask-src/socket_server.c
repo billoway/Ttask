@@ -90,7 +90,7 @@ struct socket {
         int size;         // 下一次read操作要分配的缓冲区大小
         uint8_t udp_address[UDP_ADDRESS_SIZE];
     } p;
-    struct spinlock dw_lock;
+    spinlock_t dw_lock;
     int dw_offset;
     const void *dw_buffer;
     size_t dw_size;
@@ -224,7 +224,7 @@ struct send_object {
 #define FREE mtask_free
 
 struct socket_lock {
-    struct spinlock *lock;
+    spinlock_t *lock;
     int count;
 };
 

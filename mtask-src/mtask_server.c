@@ -30,7 +30,7 @@
 #define CHECKCALLING_END(ctx) spinlock_unlock(&ctx->calling);
 #define CHECKCALLING_INIT(ctx) spinlock_init(&ctx->calling);
 #define CHECKCALLING_DESTROY(ctx) spinlock_destroy(&ctx->calling);
-#define CHECKCALLING_DECL struct spinlock calling;
+#define CHECKCALLING_DECL spinlock_t calling;
 
 #else
 
@@ -53,7 +53,7 @@ struct mtask_context_s {
 	struct mtask_module * mod;//模块结构 保存模块（so）句柄和 函数指针
 	void * cb_ud;           //mtask_callback 设置的服务的lua_state
 	mtask_cb cb;            //mtask_callback 设置过来的消息处理回调函数
-	struct message_queue *queue; //消息队列
+	message_queue_t *queue; //消息队列
 	FILE * logfile;
     uint64_t cpu_cost;	// in microsec
     uint64_t cpu_start;	// in microsec
@@ -181,7 +181,7 @@ mtask_context_new(const char * name, const char *param)
     //注册ctx,将 ctx 存到 handle_storage (M)哈希表中，并得到一个handle,得到服务的地址
 	ctx->handle = mtask_handle_register(ctx);
     //创建服务（mtask_context中）的消息队列 ，服务句柄会放在消息队列中
-	struct message_queue * queue = ctx->queue = mtask_mq_create(ctx->handle);
+	message_queue_t * queue = ctx->queue = mtask_mq_create(ctx->handle);
 	// init function maybe use ctx->handle, so it must init at last
 	context_inc();
 	CHECKCALLING_BEGIN(ctx)
@@ -330,14 +330,14 @@ mtask_context_dispatchall(mtask_context_t * ctx)
 {
 	// for mtask_error
 	mtask_message_t msg;
-	struct message_queue *q = ctx->queue;
+	message_queue_t *q = ctx->queue;
 	while (!mtask_mq_pop(q,&msg)) {
 		dispatch_message(ctx, &msg);
 	}
 }
 //消息调度
-struct message_queue * 
-mtask_context_message_dispatch(mtask_monitor_t *sm, struct message_queue *q, int weight)
+message_queue_t * 
+mtask_context_message_dispatch(mtask_monitor_t *sm, message_queue_t *q, int weight)
 {
 	if (q == NULL) {
 		q = mtask_globalmq_pop();//全局消息列表队列中弹出一个消息队列
@@ -384,7 +384,7 @@ mtask_context_message_dispatch(mtask_monitor_t *sm, struct message_queue *q, int
 	}
 
 	assert(q == ctx->queue);
-	struct message_queue *nq = mtask_globalmq_pop();
+	message_queue_t *nq = mtask_globalmq_pop();
 	if (nq) {
 		// If global mq is not empty , push q back, and return next queue (nq)
 		// Else (global mq is empty or block, don't push q back, and return q again (for next dispatch)

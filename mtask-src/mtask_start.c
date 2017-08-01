@@ -173,7 +173,7 @@ thread_worker(void *p)
 	struct monitor *m = wp->m;
 	mtask_monitor_t *sm = m->m[id];//通过线程id拿到监视器结构（mtask_monitor）
 	mtask_thread_init(THREAD_WORKER);
-	struct message_queue * q = NULL;
+	message_queue_t * q = NULL;
 	while (!m->quit) {
         //消息调度执行（取出消息 执行服务中的回调函数）每个服务都有一个权重
 		q = mtask_context_message_dispatch(sm, q, weight);

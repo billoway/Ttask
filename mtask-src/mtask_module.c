@@ -15,7 +15,7 @@
 //模块管理结构
 struct modules {
 	int count;              //已加载模块的数量
-	struct spinlock lock;   //互斥锁
+	spinlock_t lock;   //互斥锁
 	const char * path;      //模块路径
 	struct mtask_module m[MAX_MODULE_TYPE];//模块数组
 };

@@ -57,7 +57,7 @@ struct link_list {
 struct timer {
     struct link_list near[TIME_NEAR];  //定时器容器数组存放不同的定时器容器 256个
     struct link_list t[4][TIME_LEVEL]; //四级梯队 四级不同的定时器
-    struct spinlock lock;              //自旋锁
+    spinlock_t lock;              //自旋锁
     uint32_t time;                     //当前已经流过的滴答计数
     uint32_t starttime;                //开机启动时间绝对时间
     uint64_t current;                  //相对时间 相对开机时间
