@@ -160,7 +160,7 @@ dispatch_list(struct timer_node *current)
 {
 	do {
 		struct timer_event * event = (struct timer_event *)(current+1);
-		struct mtask_message message;
+		mtask_message_t message;
 		message.source = 0;
 		message.session = event->session;
 		message.data = NULL;
@@ -233,7 +233,7 @@ int
 mtask_timeout(uint32_t handle, int time, int session)
 {
 	if (time == 0) { //time<0 加入消息队列
-		struct mtask_message message;
+		mtask_message_t message;
 		message.source = 0;
 		message.session = session;
 		message.data = NULL;

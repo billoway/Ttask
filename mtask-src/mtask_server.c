@@ -127,7 +127,7 @@ struct drop_t {
 };
 
 static void
-drop_message(struct mtask_message *msg, void *ud)
+drop_message(mtask_message_t *msg, void *ud)
 {
 	struct drop_t *d = ud;
 	mtask_free(msg->data);
@@ -262,7 +262,7 @@ mtask_context_release(mtask_context_t *ctx)
 }
 //将消息压入到目的地址服务的消息队列中供work线程取出
 int
-mtask_context_push(uint32_t handle, struct mtask_message *message)
+mtask_context_push(uint32_t handle, mtask_message_t *message)
 {   //通过handle找到H中保存的mtask_context ref+1
 	mtask_context_t * ctx = mtask_handle_grab(handle);
 	if (ctx == NULL) {
@@ -296,7 +296,7 @@ mtask_isremote(mtask_context_t * ctx, uint32_t handle, int * harbor)
 }
 //消息调度:调用服务的回调函数处理服务的消息/
 static void
-dispatch_message(mtask_context_t *ctx, struct mtask_message *msg)
+dispatch_message(mtask_context_t *ctx, mtask_message_t *msg)
 {
 	assert(ctx->init);
 	CHECKCALLING_BEGIN(ctx)
@@ -329,7 +329,7 @@ void
 mtask_context_dispatchall(mtask_context_t * ctx)
 {
 	// for mtask_error
-	struct mtask_message msg;
+	mtask_message_t msg;
 	struct message_queue *q = ctx->queue;
 	while (!mtask_mq_pop(q,&msg)) {
 		dispatch_message(ctx, &msg);
@@ -355,7 +355,7 @@ mtask_context_message_dispatch(mtask_monitor_t *sm, struct message_queue *q, int
 	}
 
 	int i,n=1;
-	struct mtask_message msg;
+	mtask_message_t msg;
 
 	for (i=0;i<n;i++) {
 		if (mtask_mq_pop(q,&msg)) { //从服务的消息队列中弹出一条服务消息
@@ -807,7 +807,7 @@ mtask_send(mtask_context_t * context, uint32_t source, uint32_t destination , in
 		rmsg->sz = sz;
 		mtask_harbor_send(rmsg, source, session);//将消息发送到其他远程节点
 	} else { //如果目的地址是本地节点的
-		struct mtask_message smsg;//本机消息直接压入对应的消息队列
+		mtask_message_t smsg;//本机消息直接压入对应的消息队列
 		smsg.source = source;
 		smsg.session = session;
 		smsg.data = data;
@@ -874,7 +874,7 @@ mtask_callback(mtask_context_t * context, void *ud, mtask_cb cb)
 void
 mtask_context_send(mtask_context_t * ctx, void * msg, size_t sz, uint32_t source, int type, int session)
 {
-	struct mtask_message smsg;
+	mtask_message_t smsg;
 	smsg.source = source;
 	smsg.session = session;
 	smsg.data = msg;

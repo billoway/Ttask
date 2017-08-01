@@ -52,7 +52,7 @@ mtask_error(mtask_context_t * context, const char *msg, ...)
     }
 
 
-	struct mtask_message smsg;
+	mtask_message_t smsg;
 	if (context == NULL) {
 		smsg.source = 0;
 	} else {

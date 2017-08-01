@@ -125,7 +125,7 @@ static void
 signal_hup()
 {
     // make log file reopen
-    struct mtask_message smsg;
+    mtask_message_t smsg;
     smsg.source = 0;
     smsg.session = 0;
     smsg.data = NULL;

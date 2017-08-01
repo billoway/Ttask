@@ -1373,8 +1373,8 @@ _clear_closed_event(struct socket_server *ss, struct socket_message * result, in
 /*
  1、socket_server_poll监控有没有事件发生
  2、如果有事件发生，看是不是从管道过来的，如果是管道过来的就调用_ctrl_cmd去处理，如果是从 socket 描述符过来的，根据 s->type 进行相应的处理
- 3、最后根据socket_server_poll的返回值调用 forward_message组装一个装有数据为struct mtask_socket_message的结构体的消息结构:struct mtask_message(消息类型为 PTYPE_SOCKET)
- 4、消息结构struct mtask_message组装完毕后，调用mtask_context_push将其压入对应服务的消息队列，这样gate服务就知道远端有数据过来了。
+ 3、最后根据socket_server_poll的返回值调用 forward_message组装一个装有数据为struct mtask_socket_message的结构体的消息结构:mtask_message_t(消息类型为 PTYPE_SOCKET)
+ 4、消息结构mtask_message_t组装完毕后，调用mtask_context_push将其压入对应服务的消息队列，这样gate服务就知道远端有数据过来了。
 
  */
 int 

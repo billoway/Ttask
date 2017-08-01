@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include "mtask.h"
 #include "mtask_monitor.h"
+#include "mtask_mq.h"
 //mtask 主要功能，初始化组件、加载服务和通知服务
-struct mtask_message;//mtask 内部消息结构
 
 mtask_context_t * mtask_context_new(const char * name, const char * parm);
 
@@ -18,7 +18,7 @@ mtask_context_t * mtask_context_release(mtask_context_t *);
 
 uint32_t mtask_context_handle(mtask_context_t *);
 
-int mtask_context_push(uint32_t handle, struct mtask_message *message);
+int mtask_context_push(uint32_t handle, mtask_message_t *message);
 
 void mtask_context_send(mtask_context_t * context, void * msg, size_t sz, uint32_t source, int type, int session);
 

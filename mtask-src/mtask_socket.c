@@ -60,7 +60,7 @@ forward_message(int type, bool padding, struct socket_message * result)
         sm->buffer = result->data;
     }
     
-    struct mtask_message message;
+    mtask_message_t message;
     message.source = 0;
     message.session = 0;
     message.data = sm;

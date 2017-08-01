@@ -30,7 +30,7 @@ struct message_queue {
     int in_global;    //是否在全局消息队列中的flag
     int overload;     //如果过载，非0(置为消息队列当前的消息长度)
     int overload_threshold;//过载阀值，超过此值说明过载了
-    struct mtask_message *queue; //存放具体消息的连续内存的指针(服务的一条消息对应一个struct mtask_message结构)
+    mtask_message_t *queue; //存放具体消息的连续内存的指针(服务的一条消息对应一个mtask_message_t结构)
     struct message_queue *next;  //下一个服务的消息队列节点指针
 };
 
@@ -95,7 +95,7 @@ mtask_mq_create(uint32_t handle)
 	q->release = 0;
 	q->overload = 0;
 	q->overload_threshold = MQ_OVERLOAD;
-	q->queue = mtask_malloc(sizeof(struct mtask_message) * q->cap);//分配连续的cap内存用于存放具体消息
+	q->queue = mtask_malloc(sizeof(mtask_message_t) * q->cap);//分配连续的cap内存用于存放具体消息
 	q->next = NULL;
 
 	return q;
@@ -145,7 +145,7 @@ mtask_mq_overload(struct message_queue *q)
 }
 //弹出消息队列中的头部消息
 int
-mtask_mq_pop(struct message_queue *q, struct mtask_message *message)
+mtask_mq_pop(struct message_queue *q, mtask_message_t *message)
 {
 	int ret = 1;
 	SPIN_LOCK(q)
@@ -186,7 +186,7 @@ mtask_mq_pop(struct message_queue *q, struct mtask_message *message)
 static void
 expand_queue(struct message_queue *q)
 {
-	struct mtask_message *new_queue = mtask_malloc(sizeof(struct mtask_message) * q->cap * 2);
+	mtask_message_t *new_queue = mtask_malloc(sizeof(mtask_message_t) * q->cap * 2);
 	int i;
 	for (i=0;i<q->cap;i++) {
 		new_queue[i] = q->queue[(q->head + i) % q->cap];
@@ -201,7 +201,7 @@ expand_queue(struct message_queue *q)
 //将服务的某条消息压入服务的消息队列尾
 //如果标识为在全局中 则将消息队列挂在到全局消息队列的尾部
 void
-mtask_mq_push(struct message_queue *q, struct mtask_message *message)
+mtask_mq_push(struct message_queue *q, mtask_message_t *message)
 {
 	assert(message);
 	SPIN_LOCK(q)
@@ -247,7 +247,7 @@ mtask_mq_mark_release(struct message_queue *q)
 static void
 _drop_queue(struct message_queue *q, message_drop drop_func, void *ud)
 {
-	struct mtask_message msg;
+	mtask_message_t msg;
 	while(!mtask_mq_pop(q, &msg)) {
 		drop_func(&msg, ud);
 	}
