@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "mtask.h"
+#include "mtask_monitor.h"
 //mtask 主要功能，初始化组件、加载服务和通知服务
 struct mtask_message;//mtask 内部消息结构
-struct mtask_monitor;// 监视的结构
 
 mtask_context_t * mtask_context_new(const char * name, const char * parm);
 
@@ -24,7 +24,7 @@ void mtask_context_send(mtask_context_t * context, void * msg, size_t sz, uint32
 
 int mtask_context_newsession(mtask_context_t *);
 // return next queue
-struct message_queue * mtask_context_message_dispatch(struct mtask_monitor *, struct message_queue *, int weight);
+struct message_queue * mtask_context_message_dispatch(mtask_monitor_t *, struct message_queue *, int weight);
 
 int mtask_context_total();
 // for mtask_error output before exit

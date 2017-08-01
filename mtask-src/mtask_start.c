@@ -22,7 +22,7 @@
 //监控结构
 struct monitor {
 	int count;                  //工作线程数量
-	struct mtask_monitor ** m;  //monitor 工作线程监控列表
+	mtask_monitor_t ** m;  //monitor 工作线程监控列表
 	pthread_cond_t cond;        //条件变量
 	pthread_mutex_t mutex;      //互斥锁
 	int sleep;                  //睡眠中工作线程数量
@@ -171,7 +171,7 @@ thread_worker(void *p)
 	int id = wp->id;
 	int weight = wp->weight;
 	struct monitor *m = wp->m;
-	struct mtask_monitor *sm = m->m[id];//通过线程id拿到监视器结构（mtask_monitor）
+	mtask_monitor_t *sm = m->m[id];//通过线程id拿到监视器结构（mtask_monitor）
 	mtask_thread_init(THREAD_WORKER);
 	struct message_queue * q = NULL;
 	while (!m->quit) {
@@ -206,7 +206,7 @@ start(int thread)
 	m->count = thread;
 	m->sleep = 0;
 
-	m->m = mtask_malloc(thread * sizeof(struct mtask_monitor *));
+	m->m = mtask_malloc(thread * sizeof(mtask_monitor_t *));
 	int i;
 	for (i=0;i<thread;i++) {
 		m->m[i] = mtask_monitor_new();//创建mtask_monitor结构放在监视列表 为每个线程新建一个监视

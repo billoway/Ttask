@@ -7,7 +7,7 @@
 #include <stdbool.h>
 
 #include "mtask.h"
-
+#include "mtask_monitor.h"
 #include "mtask_server.h"
 #include "mtask_module.h"
 #include "mtask_handle.h"
@@ -15,7 +15,6 @@
 #include "mtask_timer.h"
 #include "mtask_harbor.h"
 #include "mtask_env.h"
-#include "mtask_monitor.h"
 #include "mtask_imp.h"
 #include "mtask_log.h"
 #include "mtask_spinlock.h"
@@ -338,7 +337,7 @@ mtask_context_dispatchall(mtask_context_t * ctx)
 }
 //消息调度
 struct message_queue * 
-mtask_context_message_dispatch(struct mtask_monitor *sm, struct message_queue *q, int weight)
+mtask_context_message_dispatch(mtask_monitor_t *sm, struct message_queue *q, int weight)
 {
 	if (q == NULL) {
 		q = mtask_globalmq_pop();//全局消息列表队列中弹出一个消息队列
