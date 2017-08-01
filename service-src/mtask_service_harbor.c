@@ -1,3 +1,11 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+#include <assert.h>
+#include <stdint.h>
+#include <unistd.h>
+
 #include "mtask.h"
 #include "mtask_harbor.h"
 #include "mtask_socket.h"
@@ -13,13 +21,7 @@
 	If we don't known a globalname, send message to slave in PTYPE_TEXT. Q name
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
-#include <stdint.h>
-#include <unistd.h>
+
 
 //节点服务,与其他节点互通 harbor.so
 // harbor主要用于mtask集群 不同节点间的通信 是mtask集群的通信模块
@@ -84,7 +86,7 @@ struct slave {
 // harbor的结构 harbor保存了本集群所有节点的通信地址 mtask集群内部会简历 n*n个节点
 // 相当于每个节点间都建立了tcp连接
 struct harbor {
-    struct mtask_context *ctx; //harbor节点服务的 mtask_ctx
+    mtask_context_t *ctx; //harbor节点服务的 mtask_ctx
     int id;
     uint32_t slave;
     struct hashmap * map;   //hashmap存储keyvalue
@@ -349,7 +351,7 @@ forward_local_messsage(struct harbor *h, void *msg, int sz)
 }
 
 static void
-send_remote(struct mtask_context * ctx, int fd, const char * buffer, size_t sz, struct remote_message_header * cookie)
+send_remote(mtask_context_t * ctx, int fd, const char * buffer, size_t sz, struct remote_message_header * cookie)
 {
 	size_t sz_header = sz+sizeof(*cookie);
 	if (sz_header > UINT32_MAX) {
@@ -371,7 +373,7 @@ dispatch_name_queue(struct harbor *h, struct keyvalue * node)
 	struct harbor_msg_queue * queue = node->queue;
 	uint32_t handle = node->value;
 	int harbor_id = handle >> HANDLE_REMOTE_SHIFT;
-	struct mtask_context * context = h->ctx;
+	mtask_context_t * context = h->ctx;
 	struct slave *s = &h->s[harbor_id];
 	int fd = s->fd;
 	if (fd == 0) {
@@ -546,7 +548,7 @@ static int
 remote_send_handle(struct harbor *h, uint32_t source, uint32_t destination, int type, int session, const char * msg, size_t sz)
 {
 	int harbor_id = destination >> HANDLE_REMOTE_SHIFT;
-	struct mtask_context * context = h->ctx;
+	mtask_context_t * context = h->ctx;
 	if (harbor_id == h->id) {
 		// local message
 		mtask_send(context, source, destination , type | PTYPE_TAG_DONTCOPY, session, (void *)msg, sz);
@@ -684,7 +686,7 @@ harbor_id(struct harbor *h, int fd)
 }
 
 static int
-mainloop(struct mtask_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
+mainloop(mtask_context_t * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
 {
 	struct harbor * h = ud;
 	switch (type) {
@@ -744,7 +746,7 @@ mainloop(struct mtask_context * context, void * ud, int type, int session, uint3
 }
 
 int
-harbor_init(struct harbor *h, struct mtask_context *ctx, const char * args)
+harbor_init(struct harbor *h, mtask_context_t *ctx, const char * args)
 {
 	h->ctx = ctx;
 	int harbor_id = 0;

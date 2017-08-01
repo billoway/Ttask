@@ -1,9 +1,11 @@
-#include "mtask.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+
+#include "mtask.h"
+
+
 
 //logger.so
 // mtask的日志log服务
@@ -35,7 +37,7 @@ logger_release(struct logger *inst)
 }
 
 static int
-logger_cb(struct mtask_context * context, void *ud, int type, int session, uint32_t source, const void *msg, size_t sz)
+logger_cb(mtask_context_t * context, void *ud, int type, int session, uint32_t source, const void *msg, size_t sz)
 {
 	struct logger * inst = ud;
     switch (type) {
@@ -55,7 +57,7 @@ logger_cb(struct mtask_context * context, void *ud, int type, int session, uint3
 }
 
 int
-logger_init(struct logger * inst, struct mtask_context *ctx, const char *parm)
+logger_init(struct logger * inst, mtask_context_t *ctx, const char *parm)
 {
 	if (parm) {
 		inst->handle = fopen(parm,"w");//打开日志文件保存文件句柄

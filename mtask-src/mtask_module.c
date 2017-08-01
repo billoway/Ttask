@@ -52,8 +52,10 @@ _try_open(struct modules *m, const char * name)
 		} else {
 			fprintf(stderr,"Invalid C service path\n");
 			exit(1);
-		}//加载so库 全局共享解析所有符号的方式加载so
-		dl = dlopen(tmp, RTLD_NOW | RTLD_GLOBAL);// dlopen() 打开一个动态链接库，并返回动态链接库的句柄
+		}
+        //加载so库 全局共享解析所有符号的方式加载so
+        // dlopen() 打开一个动态链接库，并返回动态链接库的句柄
+		dl = dlopen(tmp, RTLD_NOW | RTLD_GLOBAL);
 		path = l;
 	}while(dl == NULL);
 
@@ -152,6 +154,7 @@ mtask_module_insert(struct mtask_module *mod)
 }
 // intptr_t对于32位环境是int，对于64位环境是long int
 // C99规定intptr_t可以保存指针值，因而将(~0)先转为intptr_t再转为void*
+//一个合法的 module 允许没有 create 这个 api,只有非 NULL 才是合法的 module 对象。
 void * 
 mtask_module_instance_create(struct mtask_module *m)
 {
@@ -163,7 +166,8 @@ mtask_module_instance_create(struct mtask_module *m)
 }
 
 int
-mtask_module_instance_init(struct mtask_module *m, void * inst, struct mtask_context *ctx, const char * parm)
+mtask_module_instance_init(struct mtask_module *m, void * inst,
+                           mtask_context_t *ctx, const char * parm)
 {
 	return m->init(inst, ctx, parm);
 }

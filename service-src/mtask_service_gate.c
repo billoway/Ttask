@@ -1,14 +1,16 @@
-#include "mtask.h"
-#include "mtask_socket.h"
-#include "databuffer.h"
-#include "hashid.h"
-
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
+
+#include "mtask.h"
+#include "mtask_socket.h"
+#include "databuffer.h"
+#include "hashid.h"
+
+
 
 #define BACKLOG 32
 
@@ -21,7 +23,7 @@ struct connection {
 };
 
 struct gate {
-	struct mtask_context *ctx;
+	mtask_context_t *ctx;
 	int listen_id;
 	uint32_t watchdog;
 	uint32_t broker;
@@ -47,7 +49,7 @@ void
 gate_release(struct gate *g)
 {
 	int i;
-	struct mtask_context *ctx = g->ctx;
+	mtask_context_t *ctx = g->ctx;
 	for (i=0;i<g->max_connection;i++) {
 		struct connection *c = &g->conn[i];
 		if (c->id >=0) {
@@ -92,7 +94,7 @@ _forward_agent(struct gate * g, int fd, uint32_t agentaddr, uint32_t clientaddr)
 static void
 _ctrl(struct gate * g, const void * msg, int sz)
 {
-	struct mtask_context * ctx = g->ctx;
+	mtask_context_t * ctx = g->ctx;
 	char tmp[sz+1];
 	memcpy(tmp, msg, sz);
 	tmp[sz] = '\0';
@@ -160,7 +162,7 @@ _report(struct gate * g, const char * data, ...)
 	if (g->watchdog == 0) {
 		return;
 	}
-	struct mtask_context * ctx = g->ctx;
+	mtask_context_t * ctx = g->ctx;
 	va_list ap;
 	va_start(ap, data);
 	char tmp[1024];
@@ -173,7 +175,7 @@ _report(struct gate * g, const char * data, ...)
 static void
 _forward(struct gate *g, struct connection * c, int size)
 {
-    struct mtask_context * ctx = g->ctx;
+    mtask_context_t * ctx = g->ctx;
     if (g->broker) {
         void * temp = mtask_malloc(size);
         databuffer_read(&c->buffer,&g->mp,temp, size);
@@ -202,7 +204,7 @@ dispatch_message(struct gate *g, struct connection *c, int id, void * data, int 
             return;
         } else if (size > 0) {
             if (size >= 0x1000000) {
-                struct mtask_context * ctx = g->ctx;
+                mtask_context_t * ctx = g->ctx;
                 databuffer_clear(&c->buffer,&g->mp);
                 mtask_socket_close(ctx, id);
                 mtask_error(ctx, "Recv socket message > 16M");
@@ -218,7 +220,7 @@ dispatch_message(struct gate *g, struct connection *c, int id, void * data, int 
 static void
 dispatch_socket_message(struct gate *g, const struct mtask_socket_message * message, int sz)
 {
-    struct mtask_context * ctx = g->ctx;
+    mtask_context_t * ctx = g->ctx;
     switch(message->type) {
         case MTASK_SOCKET_TYPE_DATA: {
             int id = hashid_lookup(&g->hash, message->id);
@@ -280,7 +282,7 @@ dispatch_socket_message(struct gate *g, const struct mtask_socket_message * mess
 }
 
 static int
-_cb(struct mtask_context * ctx, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
+_cb(mtask_context_t * ctx, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
 {
     struct gate *g = ud;
     switch(type) {
@@ -317,7 +319,7 @@ _cb(struct mtask_context * ctx, void * ud, int type, int session, uint32_t sourc
 static int
 start_listen(struct gate *g, char * listen_addr)
 {
-    struct mtask_context * ctx = g->ctx;
+    mtask_context_t * ctx = g->ctx;
     char * portstr = strchr(listen_addr,':');
     const char * host = "";
     int port;
@@ -345,7 +347,7 @@ start_listen(struct gate *g, char * listen_addr)
 }
 
 int
-gate_init(struct gate *g , struct mtask_context * ctx, char * parm)
+gate_init(struct gate *g , mtask_context_t * ctx, char * parm)
 {
     if (parm == NULL)
         return 1;

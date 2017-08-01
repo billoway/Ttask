@@ -2,10 +2,10 @@
 #include <assert.h>
 #include <string.h>
 
-#include "mtask_handle.h"
+#include "mtask.h"
 #include "mtask_server.h"
 #include "mtask_rwlock.h"
-#include "mtask.h"
+#include "mtask_handle.h"
 
 
 // mtask 服务编号的管理和分配
@@ -27,7 +27,7 @@ struct handle_storage {
 	uint32_t harbor;    //服务所属harbor id; harbor用于不同主机间通信
 	uint32_t handle_index;//服务索引
 	int slot_size;       //slot的个数，slot_size永远不会小于handle_index
-	struct mtask_context ** slot;//slot下挂着所有的服务相关的结构体
+	mtask_context_t ** slot;//slot下挂着所有的服务相关的结构体
     //handle_name容量，初始为2，这里 name_cap 与 slot_size 不一样的原因在于，不是每个 handle 都有name
 	int name_cap;//存储全局名字的空间的总个数，永远大于name_count
 	int name_count;  //当前全局名字的个数
@@ -37,7 +37,7 @@ struct handle_storage {
 static struct handle_storage *H = NULL;
 // 注册ctx，将 ctx 存到 handle_storage 哈希表中 的 slot，并得到一个handle
 uint32_t
-mtask_handle_register(struct mtask_context *ctx)
+mtask_handle_register(mtask_context_t *ctx)
 {
 	struct handle_storage *s = H;
 
@@ -62,8 +62,8 @@ mtask_handle_register(struct mtask_context *ctx)
         // 确保 扩大2倍空间后 总共handle即 slot的数量不超过 24位的限制
         assert((s->slot_size*2 - 1) <= HANDLE_MASK);
         // 哈希表扩大2倍
-		struct mtask_context ** new_slot = mtask_malloc(s->slot_size * 2 * sizeof(struct mtask_context *));
-		memset(new_slot, 0, s->slot_size * 2 * sizeof(struct mtask_context *));
+		mtask_context_t ** new_slot = mtask_malloc(s->slot_size * 2 * sizeof(mtask_context_t *));
+		memset(new_slot, 0, s->slot_size * 2 * sizeof(mtask_context_t *));
         // 将原来的数据拷贝到新的空间
 		for (i=0;i<s->slot_size;i++) {
 			int hash = mtask_context_handle(s->slot[i]) & (s->slot_size * 2 - 1);
@@ -77,7 +77,7 @@ mtask_handle_register(struct mtask_context *ctx)
 }
 /***********************************
  * 销毁某个服务，销毁一个服务包括:
- * 1.销毁结构体:struct mtask_context 的内存
+ * 1.销毁结构体:mtask_context_t 的内存
  * 2.将对应的s->slot[hash]置为空
  * 3.将相应的s->name内存释放
  ***********************************/
@@ -90,7 +90,7 @@ mtask_handle_retire(uint32_t handle)
 	rwlock_wlock(&s->lock);
 
 	uint32_t hash = handle & (s->slot_size-1);
-	struct mtask_context * ctx = s->slot[hash];
+	mtask_context_t * ctx = s->slot[hash];
 
 	if (ctx != NULL && mtask_context_handle(ctx) == handle) {
 		s->slot[hash] = NULL;   //释放相应的服务的指向
@@ -135,7 +135,7 @@ mtask_handle_retireall()
 		int i;
 		for (i=0;i<s->slot_size;i++) {
 			rwlock_rlock(&s->lock);
-			struct mtask_context * ctx = s->slot[i];
+			mtask_context_t * ctx = s->slot[i];
 			uint32_t handle = 0;
 			if (ctx)
 				handle = mtask_context_handle(ctx);
@@ -153,16 +153,16 @@ mtask_handle_retireall()
 /***********************************************
  * 由服务地址得到服务结构体，并将ctx->ref原子性加1
  ***********************************************/
-struct mtask_context *
+mtask_context_t *
 mtask_handle_grab(uint32_t handle)
 {
 	struct handle_storage *s = H;
-	struct mtask_context * result = NULL;
+	mtask_context_t * result = NULL;
 
 	rwlock_rlock(&s->lock);
 
 	uint32_t hash = handle & (s->slot_size-1);
-	struct mtask_context * ctx = s->slot[hash];
+	mtask_context_t * ctx = s->slot[hash];
 	if (ctx && mtask_context_handle(ctx) == handle) {
 		result = ctx;
 		mtask_context_grab(result);
@@ -284,8 +284,8 @@ mtask_handle_init(int harbor)
 	assert(H==NULL);
 	struct handle_storage * s = mtask_malloc(sizeof(*H));
 	s->slot_size = DEFAULT_SLOT_SIZE;
-	s->slot = mtask_malloc(s->slot_size * sizeof(struct mtask_context *));
-	memset(s->slot, 0, s->slot_size * sizeof(struct mtask_context *));
+	s->slot = mtask_malloc(s->slot_size * sizeof(mtask_context_t *));
+	memset(s->slot, 0, s->slot_size * sizeof(mtask_context_t *));
 
 	rwlock_init(&s->lock);
 	// reserve 0 for system

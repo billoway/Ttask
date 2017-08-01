@@ -15,6 +15,7 @@
 #include <arpa/inet.h>
 
 #include "mtask_socket.h"
+#include "mtask.h"
 
 #define BACKLOG 32
 // 2 ** 12 == 4096
@@ -453,7 +454,7 @@ lconnect(lua_State *L)
     if (port == 0) {
         return luaL_error(L, "Invalid port");
     }
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = mtask_socket_connect(ctx, host, port);
     lua_pushinteger(L, id);
     
@@ -464,7 +465,7 @@ static int
 lclose(lua_State *L)
 {
     int id = (int)luaL_checkinteger(L,1);
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     mtask_socket_close(ctx, id);
     return 0;
 }
@@ -473,7 +474,7 @@ static int
 lshutdown(lua_State *L)
 {
     int id = (int)luaL_checkinteger(L,1);
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     mtask_socket_shutdown(ctx, id);
     return 0;
 }
@@ -484,7 +485,7 @@ llisten(lua_State *L)
     const char * host = luaL_checkstring(L,1);
     int port = (int)luaL_checkinteger(L,2);
     int backlog = (int)luaL_optinteger(L,3,BACKLOG);
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = mtask_socket_listen(ctx, host,port,backlog);
     if (id < 0) {
         return luaL_error(L, "Listen error");
@@ -563,7 +564,7 @@ get_buffer(lua_State *L, int index, int *sz)
 static int
 lsend(lua_State *L)
 {
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     int sz = 0;
     void *buffer = get_buffer(L, 2, &sz);
@@ -577,7 +578,7 @@ lsend(lua_State *L)
 static int
 lsendlow(lua_State *L)
 {
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     int sz = 0;
     void *buffer = get_buffer(L, 2, &sz);
@@ -588,7 +589,7 @@ lsendlow(lua_State *L)
 
 static int
 lbind(lua_State *L) {
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int fd = (int)luaL_checkinteger(L, 1);
     int id = mtask_socket_bind(ctx,fd);
     lua_pushinteger(L,id);
@@ -598,7 +599,7 @@ lbind(lua_State *L) {
 static int
 lstart(lua_State *L)
 {
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     mtask_socket_start(ctx,id);
     return 0;
@@ -606,7 +607,7 @@ lstart(lua_State *L)
 
 static int
 lnodelay(lua_State *L) {
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     mtask_socket_nodelay(ctx,id);
     return 0;
@@ -615,7 +616,7 @@ lnodelay(lua_State *L) {
 static int
 ludp(lua_State *L)
 {
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     size_t sz = 0;
     const char * addr = lua_tolstring(L,1,&sz);
     char tmp[sz];
@@ -636,7 +637,7 @@ ludp(lua_State *L)
 static int
 ludp_connect(lua_State *L)
 {
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     size_t sz = 0;
     const char * addr = luaL_checklstring(L,2,&sz);
@@ -657,7 +658,7 @@ ludp_connect(lua_State *L)
 static int
 ludp_send(lua_State *L)
 {
-    struct mtask_context * ctx = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int id = (int)luaL_checkinteger(L, 1);
     const char * address = luaL_checkstring(L, 2);
     int sz = 0;
@@ -731,7 +732,7 @@ luaopen_mtask_socketdriver(lua_State *L) {
         { NULL, NULL },
     };
     lua_getfield(L, LUA_REGISTRYINDEX, "mtask_context");
-    struct mtask_context *ctx = lua_touserdata(L,-1);
+    mtask_context_t *ctx = lua_touserdata(L,-1);
     if (ctx == NULL) {
         return luaL_error(L, "Init mtask context first");
     }

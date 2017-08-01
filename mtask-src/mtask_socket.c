@@ -5,12 +5,11 @@
 
 #include "mtask.h"
 
-#include "mtask_socket.h"
 #include "mtask_server.h"
 #include "mtask_mq.h"
 #include "mtask_harbor.h"
 #include "socket_server.h"
-
+#include "mtask_socket.h"
 
 static struct socket_server * SOCKET_SERVER = NULL;
 
@@ -122,19 +121,19 @@ mtask_socket_poll()
 }
 
 int
-mtask_socket_send(struct mtask_context *ctx, int id, void *buffer, int sz)
+mtask_socket_send(mtask_context_t *ctx, int id, void *buffer, int sz)
 {
     return socket_server_send(SOCKET_SERVER, id, buffer, sz);
 }
 
 int
-mtask_socket_send_lowpriority(struct mtask_context *ctx, int id, void *buffer, int sz)
+mtask_socket_send_lowpriority(mtask_context_t *ctx, int id, void *buffer, int sz)
 {
 	return socket_server_send_lowpriority(SOCKET_SERVER, id, buffer, sz);
 }
 
 int 
-mtask_socket_listen(struct mtask_context *ctx, const char *host, int port, int backlog)
+mtask_socket_listen(mtask_context_t *ctx, const char *host, int port, int backlog)
 {
     // 哪个服务调用就取得那个服务的地址
 	uint32_t source = mtask_context_handle(ctx);
@@ -143,61 +142,61 @@ mtask_socket_listen(struct mtask_context *ctx, const char *host, int port, int b
 }
 
 int 
-mtask_socket_connect(struct mtask_context *ctx, const char *host, int port)
+mtask_socket_connect(mtask_context_t *ctx, const char *host, int port)
 {
 	uint32_t source = mtask_context_handle(ctx);
 	return socket_server_connect(SOCKET_SERVER, source, host, port);
 }
 
 int 
-mtask_socket_bind(struct mtask_context *ctx, int fd)
+mtask_socket_bind(mtask_context_t *ctx, int fd)
 {
 	uint32_t source = mtask_context_handle(ctx);
 	return socket_server_bind(SOCKET_SERVER, source, fd);
 }
 
 void 
-mtask_socket_close(struct mtask_context *ctx, int id)
+mtask_socket_close(mtask_context_t *ctx, int id)
 {
 	uint32_t source = mtask_context_handle(ctx);
 	socket_server_close(SOCKET_SERVER, source, id);
 }
 
 void
-mtask_socket_shutdown(struct mtask_context *ctx, int id)
+mtask_socket_shutdown(mtask_context_t *ctx, int id)
 {
     uint32_t source = mtask_context_handle(ctx);
     socket_server_shutdown(SOCKET_SERVER, source, id);
 }
 
 void 
-mtask_socket_start(struct mtask_context *ctx, int id)
+mtask_socket_start(mtask_context_t *ctx, int id)
 {
 	uint32_t source = mtask_context_handle(ctx);
 	socket_server_start(SOCKET_SERVER, source, id);
 }
 
 void
-mtask_socket_nodelay(struct mtask_context *ctx, int id)
+mtask_socket_nodelay(mtask_context_t *ctx, int id)
 {
 	socket_server_nodelay(SOCKET_SERVER, id);
 }
 
 int 
-mtask_socket_udp(struct mtask_context *ctx, const char * addr, int port)
+mtask_socket_udp(mtask_context_t *ctx, const char * addr, int port)
 {
 	uint32_t source = mtask_context_handle(ctx);
 	return socket_server_udp(SOCKET_SERVER, source, addr, port);
 }
 
 int 
-mtask_socket_udp_connect(struct mtask_context *ctx, int id, const char * addr, int port)
+mtask_socket_udp_connect(mtask_context_t *ctx, int id, const char * addr, int port)
 {
 	return socket_server_udp_connect(SOCKET_SERVER, id, addr, port);
 }
 
 int 
-mtask_socket_udp_send(struct mtask_context *ctx, int id, const char * address, const void *buffer, int sz)
+mtask_socket_udp_send(mtask_context_t *ctx, int id, const char * address, const void *buffer, int sz)
 {
     return socket_server_udp_send(SOCKET_SERVER, id, (const struct socket_udp_address *)address, buffer, sz);
 }

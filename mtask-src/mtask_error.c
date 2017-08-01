@@ -11,7 +11,7 @@
 #define LOG_MESSAGE_SIZE 256 // 日志的大小
 
 void 
-mtask_error(struct mtask_context * context, const char *msg, ...)
+mtask_error(mtask_context_t * context, const char *msg, ...)
 {
 	static uint32_t logger = 0;
 	if (logger == 0) {

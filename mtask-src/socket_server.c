@@ -1,10 +1,3 @@
-#include "mtask.h"
-
-#include "socket_server.h"
-#include "socket_poll.h"
-#include "mtask_atomic.h"
-#include "mtask_spinlock.h"
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
@@ -16,6 +9,15 @@
 #include <stdint.h>
 #include <assert.h>
 #include <string.h>
+
+#include "mtask.h"
+
+#include "socket_server.h"
+#include "socket_poll.h"
+#include "mtask_atomic.h"
+#include "mtask_spinlock.h"
+
+
 
 #define MAX_INFO 128
 // MAX_SOCKET will be 2^MAX_SOCKET_P

@@ -1,5 +1,3 @@
-#include "mtask.h"
-
 #include <lua.h>
 #include <lualib.h>
 #include <lauxlib.h>
@@ -8,6 +6,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "mtask.h"
+
 
 // snlua.so
 // lua 服务生成器
@@ -27,7 +28,7 @@
 
 struct snlua {
 	lua_State * L;
-	struct mtask_context * ctx;//服务的mtask_context结构
+	mtask_context_t * ctx;//服务的mtask_context结构
     size_t mem;
     size_t mem_report;
     size_t mem_limit;
@@ -73,14 +74,14 @@ traceback (lua_State *L)
 }
 
 static void
-report_launcher_error(struct mtask_context *ctx)
+report_launcher_error(mtask_context_t *ctx)
 {
 	// sizeof "ERROR" == 5
 	mtask_sendname(ctx, 0, ".launcher", PTYPE_TEXT, 0, "ERROR", 5);
 }
 
 static const char *
-optstring(struct mtask_context *ctx, const char *key, const char * str)
+optstring(mtask_context_t *ctx, const char *key, const char * str)
 {
 	const char * ret = mtask_command(ctx, "GETENV", key);
 	if (ret == NULL) {
@@ -90,7 +91,7 @@ optstring(struct mtask_context *ctx, const char *key, const char * str)
 }
 
 static int
-_init_cb(struct snlua *l, struct mtask_context *ctx, const char * args, size_t sz)
+_init_cb(struct snlua *l, mtask_context_t *ctx, const char * args, size_t sz)
 {
     lua_State *L = l->L;
     l->ctx = ctx;
@@ -156,7 +157,7 @@ _init_cb(struct snlua *l, struct mtask_context *ctx, const char * args, size_t s
 }
 //当worker线程调度到这个消息时便会执行
 static int
-_launch_cb(struct mtask_context * context, void *ud, int type, int session, uint32_t source , const void * msg, size_t sz)
+_launch_cb(mtask_context_t * context, void *ud, int type, int session, uint32_t source , const void * msg, size_t sz)
 {
 	assert(type == 0 && session == 0);
 	struct snlua *l = ud;
@@ -172,7 +173,7 @@ _launch_cb(struct mtask_context * context, void *ud, int type, int session, uint
 }
 //mtask_context_new 创建snlua服务会调用 create init
 int
-snlua_init(struct snlua *l, struct mtask_context *ctx, const char * args)
+snlua_init(struct snlua *l, mtask_context_t *ctx, const char * args)
 {
 	int sz = (int)strlen(args);
 	char * tmp = mtask_malloc(sz);

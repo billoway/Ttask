@@ -1,10 +1,10 @@
 #ifndef mtask_MODULE_H
 #define mtask_MODULE_H
 
-struct mtask_context;
+
 //声明dl中的函数指针
 typedef void * (*mtask_dl_create)(void);
-typedef int (*mtask_dl_init)(void * inst, struct mtask_context *, const char * parm);
+typedef int (*mtask_dl_init)(void * inst, mtask_context_t *, const char * parm);
 typedef void (*mtask_dl_release)(void * inst);
 typedef void (*mtask_dl_signal)(void * inst, int signal);
 
@@ -24,7 +24,7 @@ struct mtask_module * mtask_module_query(const char * name);
 
 void * mtask_module_instance_create(struct mtask_module *);
 
-int mtask_module_instance_init(struct mtask_module *, void * inst, struct mtask_context *ctx, const char * parm);
+int mtask_module_instance_init(struct mtask_module *, void * inst, mtask_context_t *ctx, const char * parm);
 
 void mtask_module_instance_release(struct mtask_module *, void *inst);
 

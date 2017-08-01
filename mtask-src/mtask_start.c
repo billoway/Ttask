@@ -254,14 +254,14 @@ start(int thread)
 }
 
 static void
-bootstrap(struct mtask_context * logger, const char * cmdline)
+bootstrap(mtask_context_t * logger, const char * cmdline)
 {
 	int sz = (int)strlen(cmdline);
 	char name[sz+1];
 	char args[sz+1];
 	sscanf(cmdline, "%s %s", name, args);
     // name为 "snlua" args为 "bootstrap"
-	struct mtask_context *ctx = mtask_context_new(name, args);
+	mtask_context_t *ctx = mtask_context_new(name, args);
 	if (ctx == NULL) {
         //mtask_error的本质是向logger服务发送消息，第一个参数是服务结构体
 		mtask_error(NULL, "Bootstrap error : %s\n", cmdline);
@@ -294,7 +294,7 @@ mtask_start(struct mtask_config * config)
 	mtask_socket_init();                   //初始化SOCKET_SERVER
     mtask_profile_enable(config->profile);
     //创建第一个服务（C 服务:logger(由于错误消息都是从logger服务写到相应的文件，所以需要先启动logger服务)
-	struct mtask_context *ctx = mtask_context_new(config->logservice, config->logger);
+	mtask_context_t *ctx = mtask_context_new(config->logservice, config->logger);
 	if (ctx == NULL) {
 		fprintf(stderr, "Can't launch %s service\n", config->logservice);
 		exit(1);

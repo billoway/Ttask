@@ -6,8 +6,8 @@
 #include <string.h>
 #include <assert.h>
 
-#include "mtask.h"
 #include "mtask_lua_seri.h"
+#include "mtask.h"
 
 #define KNRM  "\x1B[0m"
 #define KRED  "\x1B[31m"
@@ -16,7 +16,7 @@
 
 struct snlua {
 	lua_State * L;
-	struct mtask_context * ctx;
+	mtask_context_t * ctx;
 	const char * preload;
 };
 
@@ -32,7 +32,7 @@ traceback (lua_State *L)
 }
 // 消息不转发
 static int
-_cb(struct mtask_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
+_cb(mtask_context_t * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
 {
 	lua_State *L = ud;
 	int trace = 1;
@@ -80,7 +80,7 @@ _cb(struct mtask_context * context, void * ud, int type, int session, uint32_t s
 // 在代理模式中让 ctx->cb 返回1，即不执行销毁 msg 的动作，因为此消息还要转发的。
 // 让转发的目的服务去销毁这个内存
 static int
-forward_cb(struct mtask_context * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
+forward_cb(mtask_context_t * context, void * ud, int type, int session, uint32_t source, const void * msg, size_t sz)
 {
 	_cb(context, ud, type, session, source, msg, sz);
 	// don't delete msg in forward mode.
@@ -91,7 +91,7 @@ forward_cb(struct mtask_context * context, void * ud, int type, int session, uin
 static int
 lcallback(lua_State *L)
 {
-	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
+	mtask_context_t * context = lua_touserdata(L, lua_upvalueindex(1));
 	int forward = lua_toboolean(L, 2);//是否转发
 	luaL_checktype(L,1,LUA_TFUNCTION);//检测栈底是否为lua_function
 	lua_settop(L,1);    //删除栈底之后的栈
@@ -119,7 +119,7 @@ lcallback(lua_State *L)
 static int
 lcommand(lua_State *L)
 {
-	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
+	mtask_context_t * context = lua_touserdata(L, lua_upvalueindex(1));
 	const char * cmd = luaL_checkstring(L,1);
 	const char * result;
 	const char * parm = NULL;
@@ -138,7 +138,7 @@ lcommand(lua_State *L)
 static int
 lintcommand(lua_State *L)
 {
-    struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * context = lua_touserdata(L, lua_upvalueindex(1));
     const char * cmd = luaL_checkstring(L,1);
     const char * result;
     const char * parm = NULL;
@@ -176,7 +176,7 @@ lintcommand(lua_State *L)
 static int
 lgenid(lua_State *L)
 {
-	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
+	mtask_context_t * context = lua_touserdata(L, lua_upvalueindex(1));
 	int session = mtask_send(context, 0, 0, PTYPE_TAG_ALLOCSESSION , 0 , NULL, 0);//生成一个sesion
 	lua_pushinteger(L, session);
 	return 1;
@@ -197,7 +197,7 @@ send_message(lua_State *L, int source, int idx_type)
 {
     //如果给定索引处的值是一个完全用户数据,函数返回其内存块的地址.
     //如果值是一个轻量用户数据,那么就返回它表示的指针.
-    struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
+    mtask_context_t * context = lua_touserdata(L, lua_upvalueindex(1));
     //获取目的服务地址 string 或者 number
     uint32_t dest = (uint32_t)lua_tointeger(L, 1);
     const char * dest_string = NULL;
@@ -282,7 +282,7 @@ lredirect(lua_State *L)
 static int
 lerror(lua_State *L)
 {
-	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
+	mtask_context_t * context = lua_touserdata(L, lua_upvalueindex(1));
     int n  = lua_gettop(L); //返回栈顶索引 从1开始
     if (n <= 1) {
         lua_settop(L, 1);//它将把堆栈的栈顶设为这个索引. 设置栈顶索引为1 相当于清除栈顶为1之后的栈上的数据
@@ -320,7 +320,7 @@ ltostring(lua_State *L)
 static int
 lharbor(lua_State *L)
 {
-	struct mtask_context * context = lua_touserdata(L, lua_upvalueindex(1));
+	mtask_context_t * context = lua_touserdata(L, lua_upvalueindex(1));
 	uint32_t handle = (uint32_t)luaL_checkinteger(L,1);
 	int harbor = 0;
 	int remote = mtask_isremote(context, handle, &harbor);
@@ -396,7 +396,7 @@ luaopen_mtask_core(lua_State *L)
 	luaL_newlibtable(L, l);
 
 	lua_getfield(L, LUA_REGISTRYINDEX, "mtask_context");
-	struct mtask_context *ctx = lua_touserdata(L,-1);
+	mtask_context_t *ctx = lua_touserdata(L,-1);
 	if (ctx == NULL) {
 		return luaL_error(L, "Init mtask context first");
 	}

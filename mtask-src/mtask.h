@@ -1,10 +1,10 @@
 #ifndef mtask_H
 #define mtask_H
 
-#include "mtask_malloc.h"
-
 #include <stddef.h>
 #include <stdint.h>
+
+#include "mtask_malloc.h"
 
 #define PTYPE_TEXT              0  //文本协议
 #define PTYPE_RESPONSE          1  //response to client with session, session may be packed into package
@@ -24,13 +24,14 @@
 #define PTYPE_TAG_DONTCOPY 0x10000
 #define PTYPE_TAG_ALLOCSESSION 0x20000
 
-struct mtask_context;
+//每一个服务对应的 mtask_ctx 结构 mtask上下文结构
+typedef struct mtask_context_s mtask_context_t;
 
-void mtask_error(struct mtask_context * context, const char *msg, ...);
+void mtask_error(mtask_context_t * context, const char *msg, ...);
 // * mtask 提供了一个叫做 mtask_command 的 C API ，作为基础服务的统一入口。
-const char * mtask_command(struct mtask_context * context, const char * cmd , const char * parm);
+const char * mtask_command(mtask_context_t * context, const char * cmd , const char * parm);
 
-uint32_t mtask_queryname(struct mtask_context * context, const char * name);
+uint32_t mtask_queryname(mtask_context_t * context, const char * name);
 
 /**
  服务之间消息发送API
@@ -55,15 +56,15 @@ uint32_t mtask_queryname(struct mtask_context * context, const char * name);
  @param sz 消息的长度。通常和 message 一起结合起来使用。
  @return -1 or  session
  */
-int mtask_send(struct mtask_context * context, uint32_t source, uint32_t destination , int type, int session, void * msg, size_t sz);
+int mtask_send(mtask_context_t * context, uint32_t source, uint32_t destination , int type, int session, void * msg, size_t sz);
 
-int mtask_sendname(struct mtask_context * context, uint32_t source, const char * destination , int type, int session, void * msg, size_t sz);
+int mtask_sendname(mtask_context_t * context, uint32_t source, const char * destination , int type, int session, void * msg, size_t sz);
 
-int mtask_isremote(struct mtask_context *, uint32_t handle, int * harbor);
+int mtask_isremote(mtask_context_t *, uint32_t handle, int * harbor);
 
-typedef int (*mtask_cb)(struct mtask_context * context, void *ud, int type, int session, uint32_t source , const void * msg, size_t sz);
+typedef int (*mtask_cb)(mtask_context_t * context, void *ud, int type, int session, uint32_t source , const void * msg, size_t sz);
 
-void mtask_callback(struct mtask_context * context, void *ud, mtask_cb cb);
+void mtask_callback(mtask_context_t * context, void *ud, mtask_cb cb);
 
 uint32_t mtask_current_handle(void);
 

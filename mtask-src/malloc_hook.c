@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <lua.h>
 
+#include "mtask.h"
 #include "malloc_hook.h"
 #include "mtask_atomic.h"
-#include "mtask.h"
+
 
 // turn on MEMORY_CHECK can do more memory check, such as double free
 // #define MEMORY_CHECK

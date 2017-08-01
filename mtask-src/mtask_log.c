@@ -1,13 +1,13 @@
 #include <string.h>
 #include <time.h>
 
-#include "mtask_timer.h"
-#include "mtask_socket.h"
-#include "mtask_log.h"
 #include "mtask.h"
+#include "mtask_socket.h"
+#include "mtask_timer.h"
+#include "mtask_log.h"
 
-FILE * 
-mtask_log_open(struct mtask_context * ctx, uint32_t handle)
+FILE *
+mtask_log_open(mtask_context_t * ctx, uint32_t handle)
 {
     const char * logpath = mtask_getenv("logpath");
     if (logpath == NULL)
@@ -30,7 +30,7 @@ mtask_log_open(struct mtask_context * ctx, uint32_t handle)
 }
 
 void
-mtask_log_close(struct mtask_context * ctx, FILE *f, uint32_t handle)
+mtask_log_close(mtask_context_t * ctx, FILE *f, uint32_t handle)
 {
     mtask_error(ctx, "Close log file :%08x", handle);
     fprintf(f, "close time: %u\n", (uint32_t)mtask_now());

@@ -1,12 +1,13 @@
-#include "mtask.h"
-#include "mtask_harbor.h"
-#include "mtask_server.h"
-#include "mtask_mq.h"
-#include "mtask_handle.h"
-
 #include <string.h>
 #include <stdio.h>
 #include <assert.h>
+
+#include "mtask.h"
+#include "mtask_server.h"
+#include "mtask_handle.h"
+#include "mtask_mq.h"
+#include "mtask_harbor.h"
+
 
 /*
  服务地址是一个 32bit 整数，同一进程内的地址的高 8bit 相同。这 8bit 区分了一个服务处于那个节点。
@@ -26,7 +27,7 @@
 
 // harbor 服务对应的 mtask_context 指针
 // harbor 用来与远程主机通信 master 统一来管理
-static struct mtask_context * REMOTE = 0;
+static mtask_context_t * REMOTE = 0;
 static unsigned int HARBOR = ~0;
 
 void 
@@ -65,7 +66,7 @@ mtask_harbor_start(void *ctx)
 void
 mtask_harbor_exit()
 {
-	struct mtask_context * ctx = REMOTE;
+	mtask_context_t * ctx = REMOTE;
 	REMOTE= NULL;
 	if (ctx) {
 		mtask_context_release(ctx);
