@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7936F8D31F1A4B780002DDFA /* liblua.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 79678BBD1F0CC78400B4334A /* liblua.a */; };
 		79678BE01F0CC7A400B4334A /* lsha1.c in Sources */ = {isa = PBXBuildFile; fileRef = 79678BC01F0CC7A400B4334A /* lsha1.c */; };
 		79678BE11F0CC7A400B4334A /* mtask_lua_bson.c in Sources */ = {isa = PBXBuildFile; fileRef = 79678BC11F0CC7A400B4334A /* mtask_lua_bson.c */; };
 		79678BE21F0CC7A400B4334A /* mtask_lua_clientsocket.c in Sources */ = {isa = PBXBuildFile; fileRef = 79678BC21F0CC7A400B4334A /* mtask_lua_clientsocket.c */; };
@@ -48,6 +47,7 @@
 		79DCE8DA1B78F31D002427E5 /* mtask_start.c in Sources */ = {isa = PBXBuildFile; fileRef = 79DCE8C51B78F31D002427E5 /* mtask_start.c */; };
 		79DCE8DB1B78F31D002427E5 /* mtask_timer.c in Sources */ = {isa = PBXBuildFile; fileRef = 79DCE8C61B78F31D002427E5 /* mtask_timer.c */; };
 		79DCE8DC1B78F31D002427E5 /* socket_server.c in Sources */ = {isa = PBXBuildFile; fileRef = 79DCE8CB1B78F31D002427E5 /* socket_server.c */; };
+		79EAF15F1F3053A7009B4F5C /* liblua.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 79678BBD1F0CC78400B4334A /* liblua.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -132,6 +132,9 @@
 		79DCE8CA1B78F31D002427E5 /* socket_poll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socket_poll.h; sourceTree = "<group>"; };
 		79DCE8CB1B78F31D002427E5 /* socket_server.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = socket_server.c; sourceTree = "<group>"; };
 		79DCE8CC1B78F31D002427E5 /* socket_server.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socket_server.h; sourceTree = "<group>"; };
+		79EAF6561F31A027009B4F5C /* examples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = examples; sourceTree = SOURCE_ROOT; };
+		79EAF6571F31A027009B4F5C /* lualib */ = {isa = PBXFileReference; lastKnownFileType = folder; path = lualib; sourceTree = SOURCE_ROOT; };
+		79EAF6581F31A027009B4F5C /* service */ = {isa = PBXFileReference; lastKnownFileType = folder; path = service; sourceTree = SOURCE_ROOT; };
 		79F4E57C1B874076001B1C9B /* socket_epoll.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = socket_epoll.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -140,7 +143,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7936F8D31F1A4B780002DDFA /* liblua.a in Frameworks */,
+				79EAF15F1F3053A7009B4F5C /* liblua.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -226,6 +229,9 @@
 		79CED6A91B6B140D00378C7E /* mtask */ = {
 			isa = PBXGroup;
 			children = (
+				79EAF6561F31A027009B4F5C /* examples */,
+				79EAF6571F31A027009B4F5C /* lualib */,
+				79EAF6581F31A027009B4F5C /* service */,
 				79A8FDA01F0DCADD00C35938 /* service-src */,
 				79678BBF1F0CC7A400B4334A /* lualib-src */,
 				79DCE8A91B78F31D002427E5 /* mtask-src */,
