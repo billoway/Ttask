@@ -531,6 +531,14 @@ end
 
 -- 将func赋值给proto[typename].dispatch， 这里的func就是真正的消息处理函数
 -- func = function(session, source, cmd, subcmd, ...)
+
+--local CMD = {}
+--
+--mtask.dispatch("lua", function(session, source, cmd, ...)
+--                local f = assert(CMD[cmd])
+--                f(...)
+--                end)
+
 function mtask.dispatch(typename, func)
 	local p = proto[typename]
 	if func then  --lua类型的消息一般走这里
