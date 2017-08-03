@@ -5,7 +5,8 @@ local max_client = 64
 
 mtask.start(function()
     local test = mtask.newservice("test")
-    mtask.call(test,"lua","start","P2")
+    mtask.call(test,"lua","start",{"P1","P2","P3"})
+            
 --[[
     local s1 = mtask.call(test,"lua","start","P1")
     print("ttc.lua session1=>",s1)

@@ -17,7 +17,7 @@
  * 此库的功能最主要的是方便计算每个协程所花费的CPU时间
  */
 
-// #define DEBUG_LOG
+#define DEBUG_LOG
 
 static double
 get_time()
@@ -225,7 +225,6 @@ timing_yield(lua_State *L)
 static int
 lyield(lua_State *L)
 {
-    //printf("L coroutine_yield | C  lyield L %p \n",L);
     lua_pushthread(L);
     
     return timing_yield(L);
