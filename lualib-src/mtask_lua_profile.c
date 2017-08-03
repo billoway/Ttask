@@ -225,6 +225,7 @@ timing_yield(lua_State *L)
 static int
 lyield(lua_State *L)
 {
+    //printf("L coroutine_yield | C  lyield L %p \n",L);
     lua_pushthread(L);
     
     return timing_yield(L);

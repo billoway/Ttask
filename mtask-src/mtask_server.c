@@ -791,7 +791,7 @@ mtask_send(mtask_context_t * context, uint32_t source, uint32_t destination , in
 	}
     // 会将类型封装在真正消息中的 sz 的高八位中，并且分配 session
 	_filter_args(context, type, &session, (void **)&data, &sz);
-
+    // source 为0 的情况，框架记住自身 addr
 	if (source == 0) {
 		source = context->handle;
 	}
@@ -827,14 +827,14 @@ mtask_sendname(mtask_context_t * context, uint32_t source, const char * addr , i
 	if (source == 0) {
 		source = context->handle;
 	}
-	uint32_t des = 0;
+	uint32_t dest = 0;
 	if (addr[0] == ':') {   //带冒号的16进制字符串地址
         //字符串转换为unsigned long 例如开始是：1234这种格式说明直接的handle
-		des = (uint32_t)strtoul(addr+1, NULL, 16);
+		dest = (uint32_t)strtoul(addr+1, NULL, 16);
 	} else if (addr[0] == '.') {
         // . 说明是以名字开始的地址 需要根据名字查找 对应的 handle
-		des = mtask_handle_findname(addr + 1);//根据服务名字找到对应的handle
-		if (des == 0) {
+		dest = mtask_handle_findname(addr + 1);//根据服务名字找到对应的handle
+		if (dest == 0) {
             //不需要copy的消息类型
 			if (type & PTYPE_TAG_DONTCOPY) {
 				mtask_free(data);
@@ -855,7 +855,7 @@ mtask_sendname(mtask_context_t * context, uint32_t source, const char * addr , i
 		return session;
 	}
 
-	return mtask_send(context, source, des, type, session, data, sz);
+	return mtask_send(context, source, dest, type, session, data, sz);
 }
 
 uint32_t 

@@ -172,7 +172,7 @@ local function register_local()
 end
 
 mtask.start(function()
-	print("service_mgr.lua start calling")
+	mtask.error("service_mgr.lua start calling")
 	mtask.dispatch("lua", function(session, address, command, ...)
 		local f = cmd[command]
 		if f == nil then

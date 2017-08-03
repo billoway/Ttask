@@ -36,7 +36,7 @@ mtask.cache = require "mtask.codecache"
 function mtask.register_protocol(class)
     local name = class.name
     local id = class.id
-    print("mtask.register_protocol calling".." name=>"..name.." id=>"..id)
+    --mtask.error("mtask.register_protocol calling",name,id)
     assert(proto[name] == nil and proto[id] == nil)
     assert(type(name) == "string" and type(id) == "number" and id >=0 and id <=255)
     proto[name] = class
@@ -330,10 +330,12 @@ end
 -- 相当于 mtask.sleep(0) 。交出当前服务对 CPU 的控制权。
 --通常在你想做大量的操作，又没有机会调用阻塞 API 时，可以选择调用 yield 让系统跑的更平滑
 function mtask.yield()
+    mtask.error("mtask.yield")
 	return mtask.sleep(0)
 end
 -- 把当前 coroutine 挂起。必须由 mtask.wakeup 唤醒
 function mtask.wait(co)
+    --mtask.error(string.format("mtask.wait==> %s",co))
 	-- 由于不需要向框架注册一个定时器，但是挂起的协程需要一个session，
 	-- 所以通过 c.genid生成， c.genid不会把任何消息压入消息队列中
 	local session = c.genid() 
@@ -469,6 +471,7 @@ end
 function mtask.call(addr, typename, ...)
 	local p = proto[typename]
 	local session = c.send(addr, p.id , nil , p.pack(...))-- 发送消息
+    mtask.error(string.format("mtask.call addr=%s session==>%s",mtask.address(addr),session))
 	-- 由于mtask.call是需要返回值的，所以c.send的第三个参数表示由框架自动分配一个session，
 	-- 以便返回时根据相应的session找到对应的协程进行处理
 	if session == nil then

@@ -13,9 +13,8 @@ local memory = require "mtask.memory"
 --接下来在 master 节点上，还需要启动 DataCenter 服务。
 --然后，启动用于 UniqueService 管理的 service_mgr。
 --最后，它从 config 中读取 start 这个配置项，作为用户定义的服务启动入口脚本运行。成功后，把自己退出。
-print("bootstrap.lua  ....")
 mtask.start(function()
-	print("bootstrap.lua  start calling")
+	mtask.error("bootstrap.lua  start calling")
 	local sharestring = tonumber(mtask.getenv "sharestring" or 4096)
 	memory.ssexpand(sharestring)
 	-- 获取 config 中的 standalone 参数，如果standalone存在，它应该是一个"ip地址:端口"
@@ -23,7 +22,7 @@ mtask.start(function()
 	-- 启动 launcher 服务，用来管理所的本地服务
 	local launcher = assert(mtask.launch("snlua","launcher"))
 	mtask.name(".launcher", launcher)
-	print("bootstrap.lua mtask.launch snlua （Lua sanbox）")
+	mtask.error("bootstrap.lua mtask.launch snlua （Lua sanbox）")
 	-- 获取 config 中的 harbor 参数 默认为0
 	local harbor_id = tonumber(mtask.getenv "harbor" or 0)
 	-- 如果 harbor 为 0 (即工作在单节点模式下)

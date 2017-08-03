@@ -21,8 +21,8 @@
 #define PTYPE_RESERVED_LUA      10 //Lua 消息
 #define PTYPE_RESERVED_SNAX     11
 
-#define PTYPE_TAG_DONTCOPY 0x10000
-#define PTYPE_TAG_ALLOCSESSION 0x20000
+#define PTYPE_TAG_DONTCOPY      0x10000 //给自己发消息 TAG
+#define PTYPE_TAG_ALLOCSESSION  0x20000 //session 保持唯一的值 0 TAG
 
 //每一个服务对应的 mtask_ctx 结构 mtask上下文结构
 typedef struct mtask_context_s mtask_context_t;

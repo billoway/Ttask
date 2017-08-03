@@ -156,5 +156,5 @@ mtask.dispatch("lua", function(session, address, cmd , ...)
 end)
 
 mtask.start(function()
-	print("launcher.lua start calling")
+	mtask.error("launcher.lua start calling")
  end)
