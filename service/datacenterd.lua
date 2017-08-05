@@ -14,6 +14,7 @@ local function query(db, key, ...)
 end
 -- 查询树
 function command.QUERY(key, ...)
+	mtask.error(string.format("datacenterd.lua command.QUERY key=>%s",key))
 	local d = database[key]
 	if d then
 		return query(d, ...)
@@ -58,6 +59,7 @@ local function wakeup(db, key1, ...)
 end
 -- 更新树的值
 function command.UPDATE(...)
+	mtask.error("datacenterd.lua command.UPDATE")
 	-- 看此次更新的值是不是有等待队列在，如果有，取出闭包，返回值
 	local ret, value = update(database, ...)
 	if ret or value == nil then
@@ -97,8 +99,9 @@ local function waitfor(db, key1, key2, ...)
 end
 
 mtask.start(function()
-	mtask.error("datacenterd.lua  start calling")
+	mtask.error("datacenterd.lua  start")
 	mtask.dispatch("lua", function (_, _, cmd, ...)
+		mtask.error(string.format("datacenterd.lua  dispatch cmd=>%s",cmd))
 		if cmd == "WAIT" then
 			local ret = command.QUERY(...)
 			if ret then
@@ -111,4 +114,5 @@ mtask.start(function()
 			mtask.ret(mtask.pack(f(...)))
 		end
 	end)
+	mtask.error("datacenterd.lua  booted")
 end)

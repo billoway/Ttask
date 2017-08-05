@@ -32,6 +32,7 @@ local function response_name(name)
 end
 
 function harbor.REGISTER(name, handle)
+	mtask.error(string.format("cdummy.lua harbor.REGISTER name=>%s handle=>%s",name,handle))
 	assert(globalname[name] == nil)
 	globalname[name] = handle
 	response_name(name)
@@ -40,6 +41,7 @@ function harbor.REGISTER(name, handle)
 end
 
 function harbor.QUERYNAME(name)
+	mtask.error(string.format("cdummy.lua harbor.QUERYNAME name=>%s",name))
 	if name:byte() == 46 then	-- "." , local name
 		mtask.ret(mtask.pack(mtask.localname(name)))
 		return
@@ -59,6 +61,7 @@ function harbor.QUERYNAME(name)
 end
 
 function harbor.LINK(id)
+	mtask.error(string.format("cdummy.lua harbor.LINK id=>%s",id))
 	mtask.ret()
 end
 
@@ -66,7 +69,7 @@ function harbor.CONNECT(id)
 	mtask.error("Can't connect to other harbor in single node mode")
 end
 mtask.start(function()
-	mtask.error("cdummy.lua start calling")
+	mtask.error("cdummy.lua start")
 	local harbor_id = tonumber(mtask.getenv "harbor")
 	assert(harbor_id == 0)
 
@@ -77,6 +80,8 @@ mtask.start(function()
 	mtask.dispatch("text", function(session,source,command)
 		-- ignore all the command
 	end)
+
+	mtask.error("cdummy.lua booted")
 
 	harbor_service = assert(mtask.launch("harbor", harbor_id, mtask.self()))
 end)

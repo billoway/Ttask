@@ -89,8 +89,9 @@ function provider.test(name)
 end
 
 mtask.start(function()
-	print("service_provider.lua  start calling")
+	mtask.error("service_provider.lua  start")
 	mtask.dispatch("lua", function(session, address, cmd, ...)
+		mtask.error("service_provider.lua  dispatch")
 		provider[cmd](...)
 	end)
 	mtask.info_func(function()
@@ -111,4 +112,5 @@ mtask.start(function()
 		end
 		return info
 	end)
+	mtask.error("service_provider.lua  booted")
 end)

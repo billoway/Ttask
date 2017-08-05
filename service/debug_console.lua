@@ -117,10 +117,10 @@ local function console_main_loop(stdin, print)
 end
 
 mtask.start(function()
-	print("debug_console.lua start calling")
 	local listen_socket = socket.listen (ip, port)
-	mtask.error("Start debug console at " .. ip .. ":" .. port)
+	mtask.error("debug_console.lua start debug console at " .. ip .. ":" .. port)
 	socket.start(listen_socket , function(id, addr)
+		mtask.error(string.format("debug_console.lua  socket.start %s %s",id ,addr));
 		local function print(...)
 			local t = { ... }
 			for k,v in ipairs(t) do
@@ -132,6 +132,7 @@ mtask.start(function()
 		socket.start(id)
 		mtask.fork(console_main_loop, id , print)
 	end)
+	mtask.error("debug_console.lua  booted");
 end)
 
 function COMMAND.help()

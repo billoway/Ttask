@@ -12,6 +12,6 @@ print("Total memory:", memory.total())
 print("Total block:", memory.block())
 
 mtask.start(function() 
-	print("cmemory.lua start calling")
+	mtask.error("cmemory.lua start")
 	mtask.exit() 
 	end)

@@ -51,6 +51,7 @@ local CMD = {}
 local env_mt = { __index = _ENV }
 
 function CMD.new(name, t, ...)
+	mtask.error(string.format("sharedatad.lua  CMD.new %s",name))
 	local dt = type(t)
 	local value
 	if dt == "table" then
@@ -77,6 +78,7 @@ function CMD.new(name, t, ...)
 end
 
 function CMD.delete(name)
+	mtask.error(string.format("sharedatad.lua  CMD.delete %s",name))
 	local v = assert(pool[name])
 	pool[name] = nil
 	pool_count[name] = nil
@@ -89,6 +91,7 @@ function CMD.delete(name)
 end
 
 function CMD.query(name)
+	mtask.error(string.format("sharedatad.lua  CMD.query %s",name))
 	local v = assert(pool[name])
 	local obj = v.obj
 	sharedata.host.incref(obj)
@@ -96,6 +99,7 @@ function CMD.query(name)
 end
 
 function CMD.confirm(cobj)
+	mtask.error(string.format("sharedatad.lua  CMD.confirm %s",cobj))
 	if objmap[cobj] then
 		sharedata.host.decref(cobj)
 	end
@@ -103,6 +107,7 @@ function CMD.confirm(cobj)
 end
 
 function CMD.update(name, t, ...)
+	mtask.error(string.format("sharedatad.lua  CMD.update %s",name))
 	local v = pool[name]
 	local watch, oldcobj
 	if v then
@@ -136,6 +141,7 @@ local function check_watch(queue)
 end
 
 function CMD.monitor(name, obj)
+	mtask.error(string.format("sharedatad.lua  CMD.monitor %s %s",name,obj))
 	local v = assert(pool[name])
 	if obj ~= v.obj then
 		return v.obj
@@ -154,14 +160,17 @@ function CMD.monitor(name, obj)
 end
 
 mtask.start(function()
-	print("sharedatad.lua  start calling")
+	mtask.error("sharedatad.lua  start")
 	mtask.fork(collectobj)
 	mtask.dispatch("lua", function (session, source ,cmd, ...)
+		mtask.error(string.format("sharedatad.lua  dispatch %s %s %s",session,source,cmd))
 		local f = assert(CMD[cmd])
 		local r = f(...)
 		if r ~= NORET then
 			mtask.ret(mtask.pack(r))
 		end
 	end)
+	mtask.error("sharedatad.lua  booted")
 end)
+
 

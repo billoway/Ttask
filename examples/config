@@ -2,7 +2,7 @@ include "config.path"
 
 -- preload = "./examples/preload.lua"	-- run preload.lua before every lua service run
 thread = 8
-logger = "./log.txt"
+logger = nil --"./log.txt"
 logpath = "."
 harbor = 0
 --address = "127.0.0.1:2526"

@@ -12,9 +12,12 @@
 [:00000007] LAUNCH snlua service_mgr
 [:00000007] service_mgr.lua start calling
 [:00000008] LAUNCH snlua ttc
-[:00000009] LAUNCH snlua test
-[:00000009] test start
-[:00000009] test.lua dispatch 3 8 start table: 0x10282d580
-[:00000009] CMD.start 8
-[:00000009] mtask.ret==>userdata: 0x1028271d0 0
+[:00000008] lua loader error : ./lualib/loader.lua:24: cannot open ./service/ttc.lua: No such file or directory
+cannot open ./test/ttc.lua: No such file or directory
+./examples/ttc.lua:16: <eof> expected near 'end'
+cannot open ./test/ttc/init.lua: No such file or directory
+stack traceback:
+	[C]: in function 'error'
+	./lualib/loader.lua:24: in main chunk
+[:00000008] KILL self
 [:00000002] KILL self

@@ -7,7 +7,7 @@ local sprotoloader = require "sprotoloader"
 local proto = require "proto"
 
 mtask.start(function()
-	print("protoloader.lua  start calling")
+	mtask.error("protoloader.lua  start")
 	sprotoloader.save(proto.c2s, 1)
 	sprotoloader.save(proto.s2c, 2)
 	-- don't call mtask.exit() , because sproto.core may unload and the global slot become invalid

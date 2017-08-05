@@ -14,6 +14,7 @@ end
 local NORET = {}
 
 function command.LIST()
+	mtask.error(string.format("launcher.lua command.LIST"))
 	local list = {}
 	for k,v in pairs(services) do
 		list[mtask.address(k)] = v
@@ -22,6 +23,7 @@ function command.LIST()
 end
 
 function command.STAT()
+	mtask.error(string.format("launcher.lua command.STAT"))
 	local list = {}
 	for k,v in pairs(services) do
 		local ok, stat = pcall(mtask.call,k,"debug","STAT")
@@ -34,6 +36,7 @@ function command.STAT()
 end
 
 function command.KILL(_, handle)
+	mtask.error(string.format("launcher.lua command.KILL %s",handle))
 	handle = handle_to_address(handle)
 	mtask.kill(handle)
 	local ret = { [mtask.address(handle)] = tostring(services[handle]) }
@@ -42,6 +45,7 @@ function command.KILL(_, handle)
 end
 
 function command.MEM()
+	mtask.error(string.format("launcher.lua command.MEM"))
 	local list = {}
 	for k,v in pairs(services) do
 		local ok, kb, bytes = pcall(mtask.call,k,"debug","MEM")
@@ -55,6 +59,7 @@ function command.MEM()
 end
 
 function command.GC()
+	mtask.error(string.format("launcher.lua command.GC"))
 	for k,v in pairs(services) do
 		mtask.send(k,"debug","GC")
 	end
@@ -62,6 +67,7 @@ function command.GC()
 end
 
 function command.REMOVE(_, handle, kill)
+	mtask.error(string.format("launcher.lua command.REMOVE %s",handle))
 	services[handle] = nil
 	local response = instance[handle]
 	if response then
@@ -90,11 +96,13 @@ local function launch_service(service, ...)
 end
 -- _为发送此消息的源地址 service一般为启动lua服务的中介 (一般为 snlua)
 function command.LAUNCH(_, service, ...)
+	mtask.error(string.format("launcher.lua command.LAUNCH %s",service))
 	launch_service(service, ...) -- service 为服务模块名，... 为创建服务时传递进去的参数
 	return NORET
 end
 
 function command.LOGLAUNCH(_, service, ...)
+	mtask.error(string.format("launcher.lua command.LOGLAUNCH %s",service))
 	local inst = launch_service(service, ...)
 	if inst then
 		core.command("LOGON", mtask.address(inst))
@@ -103,6 +111,7 @@ function command.LOGLAUNCH(_, service, ...)
 end
 
 function command.ERROR(address)
+	mtask.error(string.format("launcher.lua command.ERROR %s",address))
 	-- see serivce-src/service_lua.c
 	-- init failed
 	local response = instance[address]
@@ -115,6 +124,7 @@ function command.ERROR(address)
 end
 
 function command.LAUNCHOK(address)
+	mtask.error(string.format("launcher.lua command.LAUNCHOK %s",address))
 	-- init notice
 	local response = instance[address]
 	if response then
@@ -142,11 +152,12 @@ mtask.register_protocol {
 	end,
 }
 
-mtask.dispatch("lua", function(session, address, cmd , ...)
+mtask.dispatch("lua", function(session, source, cmd , ...)
+	mtask.error(string.format("launcher.lua dispatch %s %s %s",session,source,cmd))
 	cmd = string.upper(cmd)
 	local f = command[cmd]
 	if f then
-		local ret = f(address, ...)
+		local ret = f(source, ...)
 		if ret ~= NORET then
 			mtask.ret(mtask.pack(ret))
 		end
@@ -156,5 +167,5 @@ mtask.dispatch("lua", function(session, address, cmd , ...)
 end)
 
 mtask.start(function()
-	mtask.error("launcher.lua start calling")
+	mtask.error("launcher.lua start")
  end)

@@ -6,6 +6,7 @@ local CMD = {}
 local channel
 
 function CMD.start(address, fd)
+	mtask.error("debug_agent.lua CMD.start")
 	assert(channel == nil, "start more than once")
 	mtask.error(string.format("Attach to :%08x", address))
 	local handle
@@ -21,17 +22,21 @@ function CMD.start(address, fd)
 end
 
 function CMD.cmd(cmdline)
+	mtask.error("debug_agent.lua CMD.cmd")
 	channel:write(cmdline)
 end
 
 function CMD.ping()
+	mtask.error("debug_agent.lua CMD.ping")
 	mtask.ret()
 end
 
 mtask.start(function()
-	print("debug_agent.lua  start calling")
+	mtask.error("debug_agent.lua start")
 	mtask.dispatch("lua", function(_,_,cmd,...)
+		mtask.error("debug_agent.lua dispatch %s",cmd)
 		local f = CMD[cmd]
 		f(...)
 	end)
+		mtask.error("debug_agent.lua booted")
 end)

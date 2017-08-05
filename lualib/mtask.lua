@@ -168,7 +168,7 @@ end
 
 -- suspend is local function
 function suspend(co, result, command, param, size)
-	print("suspend calling co=>%s",co,result,command,param,size)
+	--mtask.error(string.format("suspend co=>%s result=>%s command=>%s param=>%s size=>%s",co,result,command,param,size))
 	if not result then
 		-- 当协程错误发生时，或mtask.sleep被mtask.wakeup提前唤醒时
 		local session = session_coroutine_id[co]
@@ -185,17 +185,14 @@ function suspend(co, result, command, param, size)
 	end
 	-- 调用mtask.call会触发此处执行
 	if command == "CALL" then
-		print("command == CALL")
 		--仅仅记录下session对应的协程，以便将来dest 返回时找到对应的协程恢复执行，到这里source 发送消息完成
 		session_id_coroutine[param] = co-- 以session为key记录协程
 	-- 调用mtask.sleep后会触发此处执行
 	elseif command == "SLEEP" then
-		print("command == SLEEP")
 		session_id_coroutine[param] = co-- 这里的param是session
 		sleep_session[co] = param
 	-- 调用mtask.ret后会触发此处执行
 	elseif command == "RETURN" then
-		print("command == RETURN")
 		local co_session = session_coroutine_id[co]
         if co_session == 0 then
             if size ~= nil then
@@ -224,7 +221,6 @@ function suspend(co, result, command, param, size)
 		return suspend(co, coroutine_resume(co, ret))
 	-- 可看例子:testresponse.lua
 	elseif command == "RESPONSE" then
-		print("command == RESPONSE")
 		local co_session = session_coroutine_id[co]
 		local co_address = session_coroutine_address[co]
 		if session_response[co] then
@@ -277,7 +273,6 @@ function suspend(co, result, command, param, size)
 		return suspend(co, coroutine_resume(co, response))
 	-- 执行到 co_create 中的f = coroutine_yield "EXIT"会触发此处的执行，到这里对于收到消息的一方来说这次消息完全处理完毕
 	elseif command == "EXIT" then
-		print("command == EXIT")
 		-- coroutine exit
 		local address = session_coroutine_address[co]
 		release_watching(address)
@@ -286,15 +281,12 @@ function suspend(co, result, command, param, size)
 		session_response[co] = nil
 	-- 调用 mtask.exit 会触发此处执行
 	elseif command == "QUIT" then
-		print("command == QUIT")
 		-- service exit
 		return
     elseif command == "USER" then
-    	print("command == USER")
     -- See mtask.coutine for detail
         error("Call mtask.coroutine.yield out of mtask.coroutine.resume\n" .. debug.traceback(co))
 	elseif command == nil then
-		print("command == nil")
 		-- debug trace
 		return
 	else
@@ -460,12 +452,12 @@ mtask.tostring = assert(c.tostring)
 mtask.trash = assert(c.trash)
 
 local function yield_call(service, session)
-    print(string.format("yield_call service=>%s session=>%s self=>%s",service,session,mtask.self()))
+    --print(string.format("yield_call service=>%s session=>%s self=>%s",service,session,mtask.self()))
 	watching_session[session] = service
 	-- 会让出到 raw_dispatch_message 中的第二个suspend函数中，
 	-- 即执行:suspend(true, "CALL", session)
 	local succ, msg, sz = coroutine_yield("CALL", session)--让出执行
-	print(string.format("yield_call coroutine_yield 返回 %s %s %s",succ,msg,sz))
+	--print(string.format("yield_call coroutine_yield 返回 %s %s %s",succ,msg,sz))
 	watching_session[session] = nil
 	if not succ then
 		error "call failed"
@@ -484,7 +476,7 @@ end
 function mtask.call(addr, typename, ...)
 	local p = proto[typename]
 	local session = c.send(addr, p.id , nil , p.pack(...))-- 发送消息
-    print(string.format("mtask.call addr=%s session==>%s",mtask.address(addr),session))
+    --print(string.format("mtask.call addr=%s session==>%s",mtask.address(addr),session))
 	-- 由于mtask.call是需要返回值的，所以c.send的第三个参数表示由框架自动分配一个session，以便返回时根据相应的session找到对应的协程进行处理
 	if session == nil then
 		error("call to invalid address " .. mtask.address(addr))
@@ -604,10 +596,10 @@ end
 -- 所有lua服务的消息处理函数(从定时器发过来的消息源地址(source)是 0) 这里的msg就是特定的数据结构体
 -- 这里的第一个参数 prototype 是同时支持 字符串与枚举类型索引的
 local function raw_dispatch_message(prototype, msg, sz, session, source)
-	print("raw_dispatch_message",prototype,msg,sz,session,source)
+	--print("raw_dispatch_message",prototype,msg,sz,session,source)
 	-- mtask.PTYPE_RESPONSE = 1, read mtask.h
 	if prototype == 1 then-- 处理远端发送过来的返回值
-		print("prototype == 1 处理远端发送过来的返回值")
+		--print("prototype == 1 处理远端发送过来的返回值")
 		local co = session_id_coroutine[session]
 		if co == "BREAK" then
 			session_id_coroutine[session] = nil
@@ -619,7 +611,7 @@ local function raw_dispatch_message(prototype, msg, sz, session, source)
 			suspend(co, coroutine.resume(co, true, msg, sz))
 		end
 	else  --(prototype 不是1) 说明不是别的服务的返回值,找到服务注册的此类消息的 dispatch 函数，然后调用 co_create 得到一个协程 co
-		print("prototype != 1 说明不是别的服务的返回值")
+		--print("prototype != 1 说明不是别的服务的返回值")
 		local p = proto[prototype]
 		if p == nil then
 			-- 如果是需要返回值的，那么告诉源服务，说"我对你来说是dead_service不要再发过来了"
@@ -651,7 +643,7 @@ local function raw_dispatch_message(prototype, msg, sz, session, source)
 end
 -- lua服务的消息处理函数的最外层
 function mtask.dispatch_message(...)
-	print("mtask.dispatch_message",...)
+	--print("mtask.dispatch_message",...)
 	local succ, err = pcall(raw_dispatch_message,...)
 	while true do
 		local key,co = next(fork_queue)

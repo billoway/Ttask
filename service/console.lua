@@ -11,6 +11,7 @@ local function split_cmdline(cmdline)
 end
 
 local function console_main_loop()
+	mtask.error("console.lua  console_main_loop")
 	local stdin = socket.stdin()
 	while true do
 		local cmdline = socket.readline(stdin, "\n")
@@ -25,6 +26,6 @@ local function console_main_loop()
 end
 
 mtask.start(function()
-	print("console.lua  start calling")
+	mtask.error("console.lua  start")
 	mtask.fork(console_main_loop)
 end)

@@ -21,6 +21,7 @@ local node_address = setmetatable({}, { __index = get_address })
 
 -- new LOCAL channel , The low 8bit is the same with harbor_id
 function command.NEW()
+	mtask.error("multicastd.lua  command.NEW")
 	while channel[channel_id] do
 		channel_id = mc.nextid(channel_id)
 	end
@@ -33,6 +34,7 @@ end
 
 -- MUST call by the owner node of channel, delete a remote channel
 function command.DELR(source, c)
+	mtask.error("multicastd.lua  command.DELR")
 	channel[c] = nil
 	channel_n[c] = nil
 	return NORET
@@ -41,6 +43,7 @@ end
 -- delete a channel, if the channel is remote, forward the command to the owner node
 -- otherwise, delete the channel, and call all the remote node, DELR
 function command.DEL(source, c)
+	mtask.error("multicastd.lua  command.DEL")
 	local node = c % 256
 	if node ~= harbor_id then
 		mtask.send(node_address[node], "lua", "DEL", c)
@@ -103,6 +106,7 @@ mtask.register_protocol {
 -- publish a message, if the caller is remote, forward the message to the owner node (by remote_publish)
 -- If the caller is local, call publish
 function command.PUB(source, c, pack, size)
+	mtask.error("multicastd.lua  command.PUB")
 	assert(mtask.harbor(source) == harbor_id)
 	local node = c % 256
 	if node ~= harbor_id then
@@ -118,6 +122,7 @@ end
 -- If channel is not exist, return true
 -- Else set channel_remote[channel] true
 function command.SUBR(source, c)
+	mtask.error("multicastd.lua  command.SUBR")
 	local node = mtask.harbor(source)
 	if not channel[c] then
 		-- channel none exist
@@ -135,6 +140,7 @@ end
 -- the service (source) subscribe a channel
 -- If the channel is remote, node subscribe it by send a SUBR to the owner .
 function command.SUB(source, c)
+	mtask.error("multicastd.lua  command.SUB")
 	local node = c % 256
 	if node ~= harbor_id then
 		-- remote group
@@ -158,6 +164,7 @@ end
 
 -- MUST call by a node, unsubscribe a channel
 function command.USUBR(source, c)
+	mtask.error("multicastd.lua  command.USUBR")
 	local node = mtask.harbor(source)
 	assert(node ~= harbor_id)
 	local group = assert(channel_remote[c])
@@ -167,6 +174,7 @@ end
 
 -- Unsubscribe a channel, if the subscriber is empty and the channel is remote, send USUBR to the channel owner
 function command.USUB(source, c)
+	mtask.error("multicastd.lua  command.USUB")
 	local group = assert(channel[c])
 	if group[source] then
 		group[source] = nil
@@ -185,8 +193,9 @@ function command.USUB(source, c)
 end
 
 mtask.start(function()
-	print("multicastd.lua  start calling")
+	mtask.error("multicastd.lua  start")
 	mtask.dispatch("lua", function(_,source, cmd, ...)
+		mtask.error("multicastd.lua  dispatch")
 		local f = assert(command[cmd])
 		local result = f(source, ...)
 		if result ~= NORET then
@@ -196,5 +205,6 @@ mtask.start(function()
 	local self = mtask.self()
 	local id = mtask.harbor(self)
 	assert(datacenter.set("multicast", id, self) == nil)
+	mtask.error("multicastd.lua  booted")
 end)
 

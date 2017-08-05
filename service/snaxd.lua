@@ -47,9 +47,10 @@ local function timing( method, ... )
 end
 
 mtask.start(function()
-	print("snaxd.lua  start calling")
+	mtask.error("snaxd.lua  start")
 	local init = false
 	local function dispatcher( session , source , id, ...)
+		mtask.error(string.format("snaxd.lua  dispatcher %s %s %s",session,source,id))
 		local method = func[id]
 
 		if method[2] == "system" then
@@ -88,4 +89,5 @@ mtask.start(function()
 	function snax.enablecluster()
 		mtask.dispatch("lua", dispatcher)
 	end
+	mtask.err("snaxd.lua boot");
 end)

@@ -77,6 +77,7 @@ local function handshake(fd)
 end
 -- 主要是取 slave 发过来的请求，然后进行相应的处理并回应(如果需要回应的话)
 local function dispatch_slave(fd)
+	mtask.error(string.format("cmaster.lua dispatch_slave fd=>%s",fd))
 	local t, name, address = read_package(fd)
 	if t == 'R' then -- 注册全局名字
 		-- register name
@@ -101,7 +102,7 @@ end
 -- 监控 slave 的协程，其实就是对处理 slave 发过来的消息
 local function monitor_slave(slave_id, slave_address)
 	local fd = slave_node[slave_id].fd
-	mtask.error(string.format("Harbor %d (fd=%d) report %s", slave_id, fd, slave_address))
+	mtask.error(string.format("cmaster.lua monitor_slave Harbor %d (fd=%d) report %s", slave_id, fd, slave_address))
 	-- 调用 dispatch_slave 收取 slave 发过来的网络包
 	while pcall(dispatch_slave, fd) do end
 	mtask.error("slave " ..slave_id .. " is down")
@@ -114,7 +115,7 @@ local function monitor_slave(slave_id, slave_address)
 end
 
 mtask.start(function()
-	mtask.error("cmaster.lua start calling")
+	mtask.error("cmaster.lua start")
 	local master_addr = mtask.getenv "standalone"-- 得到中心节点的地址
 	mtask.error("master listen socket " .. tostring(master_addr))
 	local fd = socket.listen(master_addr)-- 监听中心节点
@@ -135,4 +136,5 @@ mtask.start(function()
 			socket.close(id)
 		end
 	end)
+	mtask.error("cmaster.lua booted")
 end)

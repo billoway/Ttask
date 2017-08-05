@@ -53,11 +53,13 @@ local function loadconfig(tmp)
 end
 
 function command.reload(source, config)
+	mtask.error(string.format("clusterd.lua command.reload %s %s",source,config))
 	loadconfig(config)
 	mtask.ret(mtask.pack(nil))
 end
 
 function command.listen(source, addr, port)
+	mtask.error(string.format("clusterd.lua command.listen %s %s %s",source,addr,port))
 	local gate = mtask.newservice("gate")
 	if port == nil then
 		addr, port = string.match(node_address[addr], "([^:]+):(.*)$")
@@ -81,6 +83,7 @@ local function send_request(source, node, addr, msg, sz)
 end
 
 function command.req(...)
+	mtask.error(string.format("clusterd.lua command.req"))
 	local ok, msg, sz = pcall(send_request, ...)
 	if ok then
 		if type(msg) == "table" then
@@ -95,6 +98,7 @@ function command.req(...)
 end
 
 function command.push(source, node, addr, msg, sz)
+	mtask.error(string.format("clusterd.lua command.push %s %s %s %s %s",source,node,addr,#msg,sz))
 	local session = node_session[node] or 1
 	local request, new_session, padding = cluster.packpush(addr, session, msg, sz)
 	if padding then	-- is multi push
@@ -112,6 +116,7 @@ end
 local proxy = {}
 
 function command.proxy(source, node, name)
+	mtask.error(string.format("clusterd.lua command.proxy %s %s %s",source,node,name))
 	local fullname = node .. "." .. name
 	if proxy[fullname] == nil then
 		proxy[fullname] = mtask.newservice("clusterproxy", node, name)
@@ -122,6 +127,7 @@ end
 local register_name = {}
 
 function command.register(source, name, addr)
+	mtask.error(string.format("clusterd.lua command.register %s %s %s",source,name,addr))
 	assert(register_name[name] == nil)
 	addr = addr or source
 	local old_name = register_name[addr]
@@ -137,6 +143,7 @@ end
 local large_request = {}
 -- 供主动监听的一方接收 gate 服务发过来的消息使用
 function command.socket(source, subcmd, fd, msg)
+	mtask.error(string.format("clusterd.lua command.socket %s %s %s %s",source,subcmd,fd,#msg))
 	if subcmd == "data" then
 		local sz
 		local addr, session, msg, padding, is_push = cluster.unpackrequest(msg)
@@ -200,10 +207,12 @@ function command.socket(source, subcmd, fd, msg)
 end
 
 mtask.start(function()
-	print("clusterd.lua  start calling")
+	mtask.error("clusterd.lua start")
 	loadconfig()
-	mtask.dispatch("lua", function(session , source, cmd, ...)
+	mtask.dispatch("lua", function(session,source, cmd, ...)
+		mtask.error(string.format("clusterd.lua dispatch %s %s %s",session,source,cmd))
 		local f = assert(command[cmd])
 		f(source, ...)
 	end)
+	mtask.error("clusterd.lua booted")
 end)

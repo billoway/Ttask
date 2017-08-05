@@ -5,14 +5,12 @@ local gate
 local agent = {}
 
 function SOCKET.open(fd, addr)
-	print("New client from : " .. addr)
-	print("watchdog.lua SOCKET.open calling".."fd==>"..fd)
+	mtask.error(string.format("watchdog.lua SOCKET.open  %s New client from :%s",fd,addr))
 	agent[fd] = mtask.newservice("agent")
 	mtask.call(agent[fd], "lua", "start", { gate = gate, client = fd, watchdog = mtask.self() })
 end
 
 local function close_agent(fd)
-	print("watchdog.lua close_agent calling".."fd==>"..fd)
 	local a = agent[fd]
 	agent[fd] = nil
 	if a then
@@ -23,45 +21,38 @@ local function close_agent(fd)
 end
 
 function SOCKET.close(fd)
-	print("watchdog.lua SOCKET.close calling".."fd==>"..fd)
-	print("socket close",fd)
+	mtask.error(string.format("watchdog.lua SOCKET.close %s",fd))
 	close_agent(fd)
 end
 
 function SOCKET.error(fd, msg)
-	print("watchdog.lua SOCKET.error calling".."fd==>"..fd)
+	mtask.error(string.format("watchdog.lua SOCKET.data %s %s",fd,#msg))
 	close_agent(fd)
 end
 
 function SOCKET.warning(fd, size)
-	print("watchdog.lua SOCKET.warning calling".."fd==>"..fd)
 	-- size K bytes havn't send out in fd
-	print("socket warning", fd, size)
+	mtask.error(string.format("watchdog.lua SOCKET.warning %s %s",fd,size))
 end
 
 function SOCKET.data(fd, msg)
+	mtask.error(string.format("watchdog.lua SOCKET.data %s %s",fd,#msg))
 end
 
 function CMD.start(conf)
-	print("watchdog.lua CMD.start calling")
+	mtask.error(string.format("watchdog.lua CMD.start %s",conf))
 	mtask.call(gate, "lua", "open" , conf)
 end
 
 function CMD.close(fd)
-	print("watchdog.lua CMD.close calling".."fd==>"..fd)
+	mtask.error(string.format("watchdog.lua CMD.close %s",fd))
 	close_agent(fd)
 end
 
 mtask.start(function()
-	print("watchdog.lua start calling")
+	mtask.error("watchdog.lua start")
 	mtask.dispatch("lua", function(session, source, cmd, subcmd, ...)
-		print("watchdog.lua ".."cmd==>"..cmd.."  session==>"..session.."  source==>"..string.format("[%x]",source))
-		if type(subcmd) == "table" then
-			mtask.print(subcmd)
-		elseif type(subcmd) == "string" then
-			print(subcmd)
-		end
-
+	    mtask.error(string.format("watchdog.lua dispatch %s %s %s %s",session,source,cmd,subcmd))
 		if cmd == "socket" then
 			local f = SOCKET[subcmd]
 			f(...)
@@ -71,6 +62,6 @@ mtask.start(function()
 			mtask.ret(mtask.pack(f(subcmd, ...)))
 		end
 	end)
-	print("watchdog.lua end calling")
+	mtask.error("watchdog.lua booted")
 	gate = mtask.newservice("gate")
 end)

@@ -68,6 +68,7 @@ local function read_name(service_name)
 end
 
 function cmd.LAUNCH(service_name, subname, ...)
+	mtask.error(string.format("service_mgr.lua  cmd.LAUNCH %s %s",service_name,subname))
 	local realname = read_name(service_name)
 
 	if realname == "snaxd" then
@@ -78,6 +79,7 @@ function cmd.LAUNCH(service_name, subname, ...)
 end
 
 function cmd.QUERY(service_name, subname)
+	mtask.error(string.format("service_mgr.lua  cmd.QUERY %s %s",service_name,subname))
 	local realname = read_name(service_name)
 
 	if realname == "snaxd" then
@@ -107,11 +109,13 @@ end
 -- 单节点模式、多节点中的主节点
 local function register_global()
 	function cmd.GLAUNCH(name, ...)
+		mtask.error("service_mgr.lua global cmd.GLAUNCH")
 		local global_name = "@" .. name
 		return cmd.LAUNCH(global_name, ...)
 	end
 
 	function cmd.GQUERY(name, ...)
+		mtask.error("service_mgr.lua global cmd.GQUERY")
 		local global_name = "@" .. name
 		return cmd.QUERY(global_name, ...)
 	end
@@ -119,6 +123,7 @@ local function register_global()
 	local mgr = {}
 
 	function cmd.REPORT(m)
+		mtask.error("service_mgr.lua global cmd.REPORT")
 		mgr[m] = true
 	end
 
@@ -131,6 +136,7 @@ local function register_global()
 	end
 
 	function cmd.LIST()
+		mtask.error("service_mgr.lua global cmd.LIST")
 		local result = {}
 		for k in pairs(mgr) do
 			pcall(add_list, result, k)
@@ -157,14 +163,17 @@ local function register_local()
 	end
 
 	function cmd.GLAUNCH(...)
+		mtask.error("service_mgr.lua local cmd.GLAUNCH")
 		return waitfor_remote("LAUNCH", ...)
 	end
 
 	function cmd.GQUERY(...)
+		mtask.error("service_mgr.lua local cmd.GQUERY")
 		return waitfor_remote("QUERY", ...)
 	end
 
 	function cmd.LIST()
+		mtask.error("service_mgr.lua local cmd.LIST")
 		return list_service()
 	end
 
@@ -172,8 +181,10 @@ local function register_local()
 end
 
 mtask.start(function()
-	mtask.error("service_mgr.lua start calling")
+	mtask.error("service_mgr.lua start")
 	mtask.dispatch("lua", function(session, address, command, ...)
+		mtask.error("service_mgr.lua dispatch")
+
 		local f = cmd[command]
 		if f == nil then
 			mtask.ret(mtask.pack(nil, "Invalid command " .. command))
@@ -201,4 +212,5 @@ mtask.start(function()
 	else
 		register_local() -- 多节点模式中的非主节点
 	end
+	mtask.error("service_mgr.lua booted")
 end)

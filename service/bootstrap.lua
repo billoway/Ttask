@@ -14,7 +14,7 @@ local memory = require "mtask.memory"
 --然后，启动用于 UniqueService 管理的 service_mgr。
 --最后，它从 config 中读取 start 这个配置项，作为用户定义的服务启动入口脚本运行。成功后，把自己退出。
 mtask.start(function()
-	mtask.error("bootstrap.lua  start calling")
+	mtask.error("bootstrap.lua  start")
 	local sharestring = tonumber(mtask.getenv "sharestring" or 4096)
 	memory.ssexpand(sharestring)
 	-- 获取 config 中的 standalone 参数，如果standalone存在，它应该是一个"ip地址:端口"

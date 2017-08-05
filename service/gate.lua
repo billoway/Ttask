@@ -14,12 +14,12 @@ mtask.register_protocol {
 local handler = {}
 
 function handler.open(source, conf)
-	print("gate.lua handler.open calling".." source=>"..string.format("[%x]",source))
+	mtask.error(string.format("gate.lua handler.open source=>%s %s",source,conf))
 	watchdog = conf.watchdog or source
 end
 
 function handler.message(fd, msg, sz)
-	print("gate.lua handler.message calling".." fd=>"..fd.." sz=>"..sz)
+	mtask.error(string.format("gate.lua handler.message fd=>%s %s %s",fd,#msg,sz))
 	-- recv a package, forward it
 	local c = connection[fd]
 	local agent = c.agent
@@ -31,7 +31,7 @@ function handler.message(fd, msg, sz)
 end
 
 function handler.connect(fd, addr)
-	print("gate.lua handler.connect calling".." fd=>"..fd)
+	mtask.error(string.format("gate.lua handler.connect fd=>%s addr=>%s",fd,addr))
 	local c = {
 		fd = fd,
 		ip = addr,
@@ -41,7 +41,6 @@ function handler.connect(fd, addr)
 end
 
 local function unforward(c)
-	print("gate.lua unforward calling")
 	if c.agent then
 		forwarding[c.agent] = nil
 		c.agent = nil
@@ -50,7 +49,6 @@ local function unforward(c)
 end
 
 local function close_fd(fd)
-	print("gate.lua close_fd calling".." fd=>"..fd)
 	local c = connection[fd]
 	if c then
 		unforward(c)
@@ -59,26 +57,26 @@ local function close_fd(fd)
 end
 
 function handler.disconnect(fd)
-	print("gate.lua handler.disconnect calling".." fd=>"..fd)
+	mtask.error(string.format("gate.lua handler.disconnect fd=>%s",fd))
 	close_fd(fd)
 	mtask.send(watchdog, "lua", "socket", "close", fd)
 end
 
 function handler.error(fd, msg)
-	print("gate.lua handler.error calling".." fd=>"..fd)
+	mtask.error(string.format("gate.lua handler.error fd=>%s msg=>%s",fd,#msg))
 	close_fd(fd)
 	mtask.send(watchdog, "lua", "socket", "error", fd, msg)
 end
 
 function handler.warning(fd, size)
-	print("gate.lua handler.warning calling".." fd=>"..fd.." size=>"..size)
+	mtask.error(string.format("gate.lua handler.warning fd=>%s size=>%s",fd,size))
 	mtask.send(watchdog, "lua", "socket", "warning", fd, size)
 end
 
 local CMD = {}
 
 function CMD.forward(source, fd, client, address)
-	print("gate.lua CMD.forward calling".." source=>"..string.format("[%x]",source))
+	mtask.error(string.format("gate.lua CMD.forward source=>%s fd=>%s client=>%s address=>%s",source,fd,client,address))
 	local c = assert(connection[fd])
 	unforward(c)
 	c.client = client or 0
@@ -88,22 +86,21 @@ function CMD.forward(source, fd, client, address)
 end
 
 function CMD.accept(source, fd)
-	print("gate.lua CMD.accept calling".." source=>"..string.format("[%x]",source))
+	mtask.error(string.format("gate.lua CMD.accept source=>%s fd=>%s",source,fd))
 	local c = assert(connection[fd])
 	unforward(c)
 	gateserver.openclient(fd)
 end
 
 function CMD.kick(source, fd)
-	print("gate.lua CMD.kick calling".." source=>"..string.format("[%x]",source))
+	mtask.error(string.format("gate.lua CMD.kick source=>%s fd=>%s",source,fd))
 	gateserver.closeclient(fd)
 end
 
 function handler.command(cmd, source, ...)
-	print("gate.lua handler.command calling".." cmd=>"..cmd.." source"..string.format("[%x]",source))
+	mtask.error(string.format("gate.lua handler.command cmd=>%s source=>%s",cmd,source))
 	local f = assert(CMD[cmd])
 	return f(source, ...)
 end
 
 gateserver.start(handler)
-print("gate.lua calling gateserver.start")
