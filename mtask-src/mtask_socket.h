@@ -41,7 +41,6 @@ int mtask_socket_bind(mtask_context_t *ctx, int fd);
 void mtask_socket_close(mtask_context_t *ctx, int id);
 
 void mtask_socket_shutdown(mtask_context_t *ctx, int id);
-
 // 启动 Socket 加入事件循环
 void mtask_socket_start(mtask_context_t *ctx, int id);
 
