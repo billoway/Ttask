@@ -150,9 +150,7 @@ mtask_handle_retireall()
 			return;
 	}
 }
-/***********************************************
- * 由服务地址得到服务结构体，并将ctx->ref原子性加1
- ***********************************************/
+
 mtask_context_t *
 mtask_handle_grab(uint32_t handle)
 {
@@ -172,9 +170,7 @@ mtask_handle_grab(uint32_t handle)
 
 	return result;
 }
-/***********************************************
- * 折半查找全局名字对应的服务的地址
- ***********************************************/
+
 uint32_t
 mtask_handle_findname(const char * name)
 {

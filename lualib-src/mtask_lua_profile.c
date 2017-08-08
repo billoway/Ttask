@@ -17,7 +17,7 @@
  * 此库的功能最主要的是方便计算每个协程所花费的CPU时间
  */
 
-// #define DEBUG_LOG
+#define DEBUG_LOG
 
 static double
 get_time()

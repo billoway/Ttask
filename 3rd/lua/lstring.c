@@ -257,7 +257,7 @@ Udata *luaS_newudata (lua_State *L, size_t s) {
  * global shared table
  */
 
-#include "rwlock.h"
+#include "mtask_rwlock.h"
 #include "mtask_atomic.h"
 #include <stdlib.h>
 
@@ -266,7 +266,7 @@ Udata *luaS_newudata (lua_State *L, size_t s) {
 #define getaddrstr(ts)	(cast(char *, (ts)) + sizeof(UTString))
 
 struct shrmap_slot {
-	struct rwlock lock;
+	rwlock_t lock;
 	TString *str;
 };
 

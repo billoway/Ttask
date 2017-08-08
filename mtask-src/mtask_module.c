@@ -107,7 +107,6 @@ _open_sym(mtask_module_t *mod)
 
 	return mod->init == NULL;
 }
-//根据模块名找模块 mtask_module* 结构，如果不存在则加载so
 mtask_module_t *
 mtask_module_query(const char * name)
 {
@@ -152,9 +151,6 @@ mtask_module_insert(mtask_module_t *mod)
 
 	SPIN_UNLOCK(M)
 }
-// intptr_t对于32位环境是int，对于64位环境是long int
-// C99规定intptr_t可以保存指针值，因而将(~0)先转为intptr_t再转为void*
-//一个合法的 module 允许没有 create 这个 api,只有非 NULL 才是合法的 module 对象。
 void * 
 mtask_module_instance_create(mtask_module_t *m)
 {

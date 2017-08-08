@@ -49,10 +49,10 @@
 
 //每一个服务对应的 mtask_ctx 结构 mtask上下文结构
 struct mtask_context_s {
-	void * instance;          //模块实例化句柄 模块xxx_create函数返回的实例 对应 模块的句柄
+	void * instance;//模块实例化句柄 模块xxx_create函数返回的实例 对应 模块的句柄
 	mtask_module_t * mod;//模块结构 保存模块（so）句柄和 函数指针
-	void * cb_ud;           //mtask_callback 设置的服务的lua_state
-	mtask_cb cb;            //mtask_callback 设置过来的消息处理回调函数
+	void * cb_ud;   //mtask_callback 设置的服务的lua_state
+	mtask_cb cb;    //mtask_callback 设置过来的消息处理回调函数
 	message_queue_t *queue; //消息队列
 	FILE * logfile;
     uint64_t cpu_cost;	// in microsec
@@ -197,7 +197,7 @@ mtask_context_new(const char * name, const char *param)
         //将服务的消息队列放入全局的消息队列尾
 		mtask_globalmq_push(queue);
 		if (ret) {
-			mtask_error(ret, "LAUNCH %s %s", name, param ? param : "");
+			mtask_error(ret, "C LAUNCH %s %s", name, param ? param : "");
 		}
 		return ret;
 	} else {
@@ -222,7 +222,6 @@ mtask_context_newsession(mtask_context_t *ctx)
 	}
 	return session;
 }
-//获取mtask_context 添加引用计数
 void
 mtask_context_grab(mtask_context_t *ctx)
 {
@@ -250,8 +249,8 @@ delete_context(mtask_context_t *ctx)
 	mtask_free(ctx);//释放ctx
 	context_dec();//减少服务数量
 }
-//减少引用计数 引用计数为0删除ctx
-mtask_context_t * 
+
+mtask_context_t *
 mtask_context_release(mtask_context_t *ctx)
 {
 	if (ATOM_DEC(&ctx->ref) == 0) {//减少引用计数 引用计数为0删除ctx
@@ -260,7 +259,7 @@ mtask_context_release(mtask_context_t *ctx)
 	}
 	return ctx;
 }
-//将消息压入到目的地址服务的消息队列中供work线程取出
+
 int
 mtask_context_push(uint32_t handle, mtask_message_t *message)
 {   //通过handle找到H中保存的mtask_context ref+1
@@ -791,7 +790,7 @@ mtask_send(mtask_context_t * context, uint32_t source, uint32_t destination , in
 	}
     // 会将类型封装在真正消息中的 sz 的高八位中，并且分配 session
 	_filter_args(context, type, &session, (void **)&data, &sz);
-
+    // source 为0 的情况，框架记住自身 addr
 	if (source == 0) {
 		source = context->handle;
 	}
@@ -827,14 +826,14 @@ mtask_sendname(mtask_context_t * context, uint32_t source, const char * addr , i
 	if (source == 0) {
 		source = context->handle;
 	}
-	uint32_t des = 0;
+	uint32_t dest = 0;
 	if (addr[0] == ':') {   //带冒号的16进制字符串地址
         //字符串转换为unsigned long 例如开始是：1234这种格式说明直接的handle
-		des = (uint32_t)strtoul(addr+1, NULL, 16);
+		dest = (uint32_t)strtoul(addr+1, NULL, 16);
 	} else if (addr[0] == '.') {
         // . 说明是以名字开始的地址 需要根据名字查找 对应的 handle
-		des = mtask_handle_findname(addr + 1);//根据服务名字找到对应的handle
-		if (des == 0) {
+		dest = mtask_handle_findname(addr + 1);//根据服务名字找到对应的handle
+		if (dest == 0) {
             //不需要copy的消息类型
 			if (type & PTYPE_TAG_DONTCOPY) {
 				mtask_free(data);
@@ -855,7 +854,7 @@ mtask_sendname(mtask_context_t * context, uint32_t source, const char * addr , i
 		return session;
 	}
 
-	return mtask_send(context, source, des, type, session, data, sz);
+	return mtask_send(context, source, dest, type, session, data, sz);
 }
 
 uint32_t 

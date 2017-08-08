@@ -253,6 +253,7 @@ send_message(lua_State *L, int source, int idx_type)
         // todo: maybe throw an error would be better
         return 0;
     }
+    //printf("C send_message session =>%d L thread %p \n",session,L);
     lua_pushinteger(L,session);//session号入栈 也就是返回session
     return 1;//返回值的个数（入栈个数）
 }
