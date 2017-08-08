@@ -117,7 +117,6 @@ local function console_main_loop(stdin, print)
 end
 
 mtask.start(function()
-	print("debug_console.lua start calling")
 	local listen_socket = socket.listen (ip, port)
 	mtask.error("Start debug console at " .. ip .. ":" .. port)
 	socket.start(listen_socket , function(id, addr)

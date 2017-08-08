@@ -29,7 +29,6 @@ function CMD.ping()
 end
 
 mtask.start(function()
-	print("debug_agent.lua  start calling")
 	mtask.dispatch("lua", function(_,_,cmd,...)
 		local f = CMD[cmd]
 		f(...)

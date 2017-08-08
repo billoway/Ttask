@@ -185,7 +185,6 @@ function command.USUB(source, c)
 end
 
 mtask.start(function()
-	print("multicastd.lua  start calling")
 	mtask.dispatch("lua", function(_,source, cmd, ...)
 		local f = assert(command[cmd])
 		local result = f(source, ...)

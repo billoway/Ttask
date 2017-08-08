@@ -87,6 +87,9 @@
 		79678BD41F0CC7A400B4334A /* msvcint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = msvcint.h; sourceTree = "<group>"; };
 		79678BD51F0CC7A400B4334A /* sproto.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sproto.c; sourceTree = "<group>"; };
 		79678BD61F0CC7A400B4334A /* sproto.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sproto.h; sourceTree = "<group>"; };
+		7978ACBE1F39F06B00C89C41 /* examples */ = {isa = PBXFileReference; lastKnownFileType = folder; path = examples; sourceTree = SOURCE_ROOT; };
+		7978ACBF1F39F06B00C89C41 /* lualib */ = {isa = PBXFileReference; lastKnownFileType = folder; path = lualib; sourceTree = SOURCE_ROOT; };
+		7978ACC01F39F06B00C89C41 /* service */ = {isa = PBXFileReference; lastKnownFileType = folder; path = service; sourceTree = SOURCE_ROOT; };
 		799665621B859D5E00D3865E /* mtask_atomic.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mtask_atomic.h; sourceTree = "<group>"; };
 		799665631B85A5A300D3865E /* mtask_spinlock.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = mtask_spinlock.h; sourceTree = "<group>"; };
 		79A8FDA11F0DCADD00C35938 /* databuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = databuffer.h; sourceTree = "<group>"; };
@@ -226,6 +229,9 @@
 		79CED6A91B6B140D00378C7E /* mtask */ = {
 			isa = PBXGroup;
 			children = (
+				7978ACBE1F39F06B00C89C41 /* examples */,
+				7978ACBF1F39F06B00C89C41 /* lualib */,
+				7978ACC01F39F06B00C89C41 /* service */,
 				79A8FDA01F0DCADD00C35938 /* service-src */,
 				79678BBF1F0CC7A400B4334A /* lualib-src */,
 				79DCE8A91B78F31D002427E5 /* mtask-src */,

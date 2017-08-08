@@ -47,7 +47,6 @@ local function timing( method, ... )
 end
 
 mtask.start(function()
-	print("snaxd.lua  start calling")
 	local init = false
 	local function dispatcher( session , source , id, ...)
 		local method = func[id]

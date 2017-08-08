@@ -14,14 +14,12 @@ local nodelay = false
 local connection = {}
 
 function gateserver.openclient(fd)
-	print("gateserver.lua gateserver.openclient calling".." fd"..fd)
 	if connection[fd] then
 		socketdriver.start(fd)
 	end
 end
 
 function gateserver.closeclient(fd)
-	print("gateserver.lua gateserver.closeclient calling")
 	local c = connection[fd]
 	if c then
 		connection[fd] = false
@@ -30,12 +28,10 @@ function gateserver.closeclient(fd)
 end
 
 function gateserver.start(handler)
-	print("gateserver.lua gateserver.start calling")
 	assert(handler.message)
 	assert(handler.connect)
 
 	function CMD.open( source, conf )
-		print("gateserver.lua CMD.open calling")
 		assert(not socket)
 		local address = conf.address or "0.0.0.0"
 		local port = assert(conf.port)
@@ -50,7 +46,6 @@ function gateserver.start(handler)
 	end
 
 	function CMD.close()
-		print("gateserver.lua CMD.close calling")
 		assert(socket)
 		socketdriver.close(socket)
 	end
@@ -58,7 +53,6 @@ function gateserver.start(handler)
 	local MSG = {}
 
 	local function dispatch_msg(fd, msg, sz)
-		print("gateserver.lua  dispatch_msg calling")
 		if connection[fd] then
 			handler.message(fd, msg, sz)
 		else
@@ -69,7 +63,6 @@ function gateserver.start(handler)
 	MSG.data = dispatch_msg
 
 	local function dispatch_queue()
-		print("gateserver.lua  dispatch_queue calling")
 		local fd, msg, sz = netpack.pop(queue)
 		if fd then
 			-- may dispatch even the handler.message blocked
@@ -86,7 +79,6 @@ function gateserver.start(handler)
 	MSG.more = dispatch_queue
 
 	function MSG.open(fd, msg)
-		print("gateserver.lua  MSG.open calling")
 		if client_number >= maxclient then
 			socketdriver.close(fd)
 			return
@@ -100,7 +92,6 @@ function gateserver.start(handler)
 	end
 
 	local function close_fd(fd)
-		print("gateserver.lua  close_fd calling")
 		local c = connection[fd]
 		if c ~= nil then
 			connection[fd] = nil
@@ -109,7 +100,6 @@ function gateserver.start(handler)
 	end
 
 	function MSG.close(fd)
-		print("gateserver.lua  MSG.close calling")
 		if fd ~= socket then
 			if handler.disconnect then
 				handler.disconnect(fd)
@@ -121,7 +111,6 @@ function gateserver.start(handler)
 	end
 
 	function MSG.error(fd, msg)
-		print("gateserver.lua  MSG.error calling")
 		if fd == socket then
 			socketdriver.close(fd)
 			mtask.error("gateserver close listen socket, accpet error:",msg)
@@ -134,7 +123,6 @@ function gateserver.start(handler)
 	end
 
 	function MSG.warning(fd, size)
-		print("gateserver.lua  MSG.warning calling")
 		if handler.warning then
 			handler.warning(fd, size)
 		end
@@ -155,11 +143,8 @@ function gateserver.start(handler)
 	}
 
 	mtask.start(function()
-		print("gateserver.lua  start calling")
 		mtask.dispatch("lua", function (_, address, cmd, ...)
-			print("gateserver.lua ".."cmd==>"..cmd.."  address==>"..string.format("[%x]",address))
 			local f = CMD[cmd]
-			print(f)
 			if f then
 				mtask.ret(mtask.pack(f(address, ...)))
 			else

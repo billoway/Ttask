@@ -97,7 +97,6 @@ local function waitfor(db, key1, key2, ...)
 end
 
 mtask.start(function()
-	print("datacenterd.lua  start calling")
 	mtask.dispatch("lua", function (_, _, cmd, ...)
 		if cmd == "WAIT" then
 			local ret = command.QUERY(...)
