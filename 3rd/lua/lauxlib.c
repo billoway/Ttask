@@ -1046,7 +1046,7 @@ LUALIB_API void luaL_checkversion_ (lua_State *L, lua_Number ver, size_t sz) {
 #include "mtask_spinlock.h"
 
 struct codecache {
-	struct spinlock lock;
+	spinlock_t lock;
 	lua_State *L;
 };
 

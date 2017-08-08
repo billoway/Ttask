@@ -316,8 +316,8 @@ mtask_now(void)
 {
     return TI->current; //进程启动时长
 }
-//创建定时器管理器TI
-void 
+
+void
 mtask_timer_init(void)
 {
     TI = timer_create_timer();

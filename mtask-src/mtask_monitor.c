@@ -4,7 +4,6 @@
 #include "mtask.h"
 #include "mtask_monitor.h"
 #include "mtask_server.h"
-#include "mtask.h"
 #include "mtask_atomic.h"
 
 // 监视的结构

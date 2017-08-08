@@ -52,7 +52,7 @@ end
 mtask.start(function()
 	mtask.error("watchdog.lua start")
 	mtask.dispatch("lua", function(session, source, cmd, subcmd, ...)
-	    mtask.error(string.format("watchdog.lua dispatch %s %s %s %s",session,source,cmd,subcmd))
+	    mtask.error(string.format("watchdog.lua dispatch %s %s %s ",session,source,cmd))
 		if cmd == "socket" then
 			local f = SOCKET[subcmd]
 			f(...)

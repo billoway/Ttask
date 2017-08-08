@@ -47,7 +47,7 @@
 		79DCE8DA1B78F31D002427E5 /* mtask_start.c in Sources */ = {isa = PBXBuildFile; fileRef = 79DCE8C51B78F31D002427E5 /* mtask_start.c */; };
 		79DCE8DB1B78F31D002427E5 /* mtask_timer.c in Sources */ = {isa = PBXBuildFile; fileRef = 79DCE8C61B78F31D002427E5 /* mtask_timer.c */; };
 		79DCE8DC1B78F31D002427E5 /* socket_server.c in Sources */ = {isa = PBXBuildFile; fileRef = 79DCE8CB1B78F31D002427E5 /* socket_server.c */; };
-		79EAF15F1F3053A7009B4F5C /* liblua.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 79678BBD1F0CC78400B4334A /* liblua.a */; };
+		79EE01771F39567900C617E8 /* liblua.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 79678BBD1F0CC78400B4334A /* liblua.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -143,7 +143,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				79EAF15F1F3053A7009B4F5C /* liblua.a in Frameworks */,
+				79EE01771F39567900C617E8 /* liblua.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
