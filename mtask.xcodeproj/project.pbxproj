@@ -232,15 +232,9 @@
 		79CED6A91B6B140D00378C7E /* mtask */ = {
 			isa = PBXGroup;
 			children = (
-<<<<<<< HEAD
-				7978ACBE1F39F06B00C89C41 /* examples */,
-				7978ACBF1F39F06B00C89C41 /* lualib */,
-				7978ACC01F39F06B00C89C41 /* service */,
-=======
 				79EAF6561F31A027009B4F5C /* examples */,
 				79EAF6571F31A027009B4F5C /* lualib */,
 				79EAF6581F31A027009B4F5C /* service */,
->>>>>>> 31d71d82381a988bb56dde1125f0bee14b7efad9
 				79A8FDA01F0DCADD00C35938 /* service-src */,
 				79678BBF1F0CC7A400B4334A /* lualib-src */,
 				79DCE8A91B78F31D002427E5 /* mtask-src */,
