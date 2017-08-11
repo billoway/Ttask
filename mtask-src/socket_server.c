@@ -920,6 +920,13 @@ _failed:
 	return SOCKET_ERROR;
 }
 
+
+static inline int
+_nomore_send_data(struct socket *s)
+{
+    return _send_buffer_empty(s) && s->dw_buffer == NULL;
+}
+
 static int
 _close_socket(socket_server_t *ss, struct request_close *request, socket_message_t *result)
 {
@@ -934,13 +941,13 @@ _close_socket(socket_server_t *ss, struct request_close *request, socket_message
 	}
     struct socket_lock l;
     socket_lock_init(s, &l);
-	if (!_send_buffer_empty(s)) { 
+	if (!_nomore_send_data(s)) {
 		int type = _send_buffer(ss,s,&l,result);
-		// type : -1 or SOCKET_WARNING or SOCKET_CLOSE, SOCKET_WARNING means _send_buffer_empty
+		// type : -1 or SOCKET_WARNING or SOCKET_CLOSE, SOCKET_WARNING means _nomore_send_data
 		if (type != -1 && type != SOCKET_WARNING)
 			return type;
 	}
-	if (request->shutdown || _send_buffer_empty(s)) {
+	if (request->shutdown || _nomore_send_data(s)) {
 		_force_close(ss,s,&l,result);
 		result->id = id;
 		result->opaque = request->opaque;
@@ -1285,7 +1292,7 @@ _report_connect(socket_server_t *ss, struct socket *s, struct socket_lock *l,
 		result->opaque = s->opaque;
 		result->id = s->id;
 		result->ud = 0;
-		if (_send_buffer_empty(s)) {
+		if (_nomore_send_data(s)) {
 			sp_write(ss->event_fd, s->fd, s, false);
 		}
 		union sockaddr_all u;
@@ -1545,8 +1552,8 @@ socket_server_connect(socket_server_t *ss, uintptr_t opaque, const char * addr, 
 static inline int
 can_direct_write(struct socket *s, int id)
 {
-    return s->id == id && _send_buffer_empty(s) && s->type == SOCKET_TYPE_CONNECTED
-                && s->dw_buffer == NULL && s->udpconnecting == 0;
+    return s->id == id && _nomore_send_data(s) && s->type == SOCKET_TYPE_CONNECTED
+                &&  s->udpconnecting == 0;
 }
 
 // return -1 when error, 0 when success

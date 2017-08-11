@@ -583,7 +583,7 @@ luaseri_unpack(lua_State *L)
 	int len;
 	if (lua_type(L,1) == LUA_TSTRING) {
 		size_t sz;
-		 buffer = (void *)lua_tolstring(L,1,&sz);
+        buffer = (void *)lua_tolstring(L,1,&sz);
 		len = (int)sz;
 	} else {
 		buffer = lua_touserdata(L,1);
