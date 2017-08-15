@@ -250,19 +250,13 @@ end
 local function close_fd(id, func)
 	local s = socket_pool[id]
 	if s then
-		if s.buffer then
-			driver.clear(s.buffer,buffer_pool)
-		end
-		if s.connected then
-			func(id)
-		end
+		driver.clear(s.buffer,buffer_pool)
+		-- the framework would send MTASK_SOCKET_TYPE_CLOSE , need close(id) later
+		driver.shutdown(id)
 	end
 end
---强行关闭一个连接。和 close 不同的是，它不会等待可能存在的其它 coroutine 的读操作。
---一般不建议使用这个 API ，但如果你需要在 __gc 元方法中关闭连接的话，shutdown 是一个比 close 更好的选择（因为在 gc 过程中无法切换 coroutine）。
-function socket.shutdown(id)
-	close_fd(id, driver.shutdown)
-end
+
+
 --在极其罕见的情况下，需要粗暴的直接关闭某个连接，而避免 socket.close 的阻塞等待流程，可以使用它。
 function socket.close_fd(id)
 	assert(socket_pool[id] == nil,"Use socket.close instead")
@@ -290,10 +284,18 @@ function socket.close(id)
 		end
 		s.connected = false
 	end
-	close_fd(id)	-- clear the buffer (already close fd)
+	driver.clear(s.buffer,buffer_pool)
 	assert(s.lock == nil or next(s.lock) == nil)
 	socket_pool[id] = nil
 end
+
+function socket.disconnected(id)
+	local s = socket_pool[id]
+	if s then
+		return not(s.connected or s.connecting)
+	end
+end
+
 --从一个 socket 上读 sz 指定的字节数。
 --如果读到了指定长度的字符串，它把这个字符串返回。
 --如果连接断开导致字节数不够，将返回一个 false 加上读到的字符串。
@@ -441,10 +443,12 @@ end
 -- you must call socket.start(id) later in other service
 function socket.abandon(id)
 	local s = socket_pool[id]
-	if s and s.buffer then
+	if s then
 		driver.clear(s.buffer,buffer_pool)
+		s.connected = false
+		wakeup(s)
+		socket_pool[id] = nil
 	end
-	socket_pool[id] = nil
 end
 -- 设置缓冲区的大小，如果不设置，则缓冲区大小应该是不做限制的
 function socket.limit(id, limit)

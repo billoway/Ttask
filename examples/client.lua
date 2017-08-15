@@ -13,8 +13,9 @@ local sproto = require "sproto"
 local print_r = require "print_r"
 
 local host = sproto.new(proto.s2c):host "package"
+print_r(host)
 local request = host:attach(sproto.new(proto.c2s))
-
+print("***************")
 local fd = assert(socket.connect("127.0.0.1", 8888))
 
 local function send_package(fd, pack)
@@ -104,7 +105,7 @@ local function dispatch_package()
 end
 
 send_request("handshake")
---send_request("set", { what = "hello", value = "world" })
+send_request("set", { what = "hello", value = "world" })
 --send_request("set", { what = "t1", value = "v3" })
 
 while true do
@@ -119,12 +120,14 @@ while true do
 		end
 
 		cmd = t[1]
+		local k = t[2]
+		local v = t[3]
 		if cmd == "quit" then
 			send_request("quit")
 		elseif cmd == "get" then
-			send_request("get", { what = t[2] })
+			send_request("get", { what = k })
 		elseif cmd == "set" then
-			send_request("set",{what = t[2],value=t[3]})
+			send_request("set",{what = k,value=v})
 		end
 	else
 		socket.usleep(100)

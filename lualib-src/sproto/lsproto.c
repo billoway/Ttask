@@ -455,7 +455,8 @@ ldumpproto(lua_State *L) {
 	return string
  */
 static int
-lpack(lua_State *L) {
+lpack(lua_State *L) 
+{
     size_t sz=0;
     const void * buffer = getbuffer(L, 1, &sz);
     // the worst-case space overhead of packing is 2 bytes per 2 KiB of input (256 words = 2KiB).

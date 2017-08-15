@@ -293,6 +293,13 @@ end
 -- 检查是不是已经连接上了，如果返回nil则代表没有连接上
 local function check_connection(self)
 	if self.__sock then
+		if socket.disconnected(self.__sock[1]) do
+			--closed by peer
+			mtask.error("socket: disconnect detected ", self.__host, self.__port)
+			close_channel_socket(self)
+			return
+		end
+
 		local authco = self.__authcoroutine
 		if not authco then
 			return true
