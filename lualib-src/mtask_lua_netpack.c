@@ -24,7 +24,8 @@
 #define TYPE_WARNING    6
 
 /*
-	Each package is uint16 + data , uint16 (serialized in big-endian) is the number of bytes comprising the data .
+	Each package is uint16 + data , uint16 (serialized in big-endian) 
+    is the number of bytes comprising the data .
  */
 
 struct netpack {

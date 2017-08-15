@@ -1,6 +1,7 @@
 package.cpath = "luaclib/?.so"
 package.path = "lualib/?.lua;examples/?.lua"
 
+
 if _VERSION ~= "Lua 5.3" then
 	error "Use lua 5.3"
 end
@@ -9,12 +10,15 @@ local socket = require "client.socket"
 local proto = require "proto"
 local sproto = require "sproto"
 
+local print_r = require "print_r"
+
 local host = sproto.new(proto.s2c):host "package"
 local request = host:attach(sproto.new(proto.c2s))
 
 local fd = assert(socket.connect("127.0.0.1", 8888))
 
 local function send_package(fd, pack)
+	print("send_package==>",pack)
 	local package = string.pack(">s2", pack)
 	socket.send(fd, package)
 end
@@ -51,16 +55,17 @@ end
 local session = 0
 
 local function send_request(name, args)
+	print("send_request==>",name,args)
 	session = session + 1
 	local str = request(name, args, session)
 	send_package(fd, str)
-	print("Request:", session)
+	print("Request :", session)
 end
 
 local last = ""
 
 local function print_request(name, args)
-	print("REQUEST", name)
+	print("REQUEST=>", name)
 	if args then
 		for k,v in pairs(args) do
 			print(k,v)
@@ -69,7 +74,7 @@ local function print_request(name, args)
 end
 
 local function print_response(session, args)
-	print("RESPONSE", session)
+	print("RESPONSE=>", session,args)
 	if args then
 		for k,v in pairs(args) do
 			print(k,v)
@@ -99,18 +104,27 @@ local function dispatch_package()
 end
 
 send_request("handshake")
-send_request("set", { what = "hello", value = "world" })
-send_request("set", { what = "t1", value = "v1" })
-send_request("set", { what = "t2", value = "v2" })
-send_request("set", { what = "t3", value = "v3" })
+--send_request("set", { what = "hello", value = "world" })
+--send_request("set", { what = "t1", value = "v3" })
+
 while true do
 	dispatch_package()
 	local cmd = socket.readstdin()
+
 	if cmd then
+		local t = {}
+
+		for w in string.gmatch(cmd,"%S+") do
+			table.insert(t,w)
+		end
+
+		cmd = t[1]
 		if cmd == "quit" then
 			send_request("quit")
-		else
-			send_request("get", { what = cmd })
+		elseif cmd == "get" then
+			send_request("get", { what = t[2] })
+		elseif cmd == "set" then
+			send_request("set",{what = t[2],value=t[3]})
 		end
 	else
 		socket.usleep(100)

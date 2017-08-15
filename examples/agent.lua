@@ -32,6 +32,7 @@ function REQUEST:quit()
 end
 
 local function request(name, args, response)
+	print("request name=>",name)
 	local f = assert(REQUEST[name])
 	local r = f(args)
 	if response then
@@ -48,9 +49,11 @@ mtask.register_protocol {
 	name = "client",
 	id = mtask.PTYPE_CLIENT,
 	unpack = function (msg, sz)
+		print("agent unpack")
 		return host:dispatch(msg, sz)
 	end,
 	dispatch = function (_, _, type, ...)
+		print("agent dispatch")
 		if type == "REQUEST" then
 			local ok, result  = pcall(request, ...)
 			if ok then
