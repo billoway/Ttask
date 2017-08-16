@@ -588,7 +588,8 @@ lsendlow(lua_State *L)
 }
 
 static int
-lbind(lua_State *L) {
+lbind(lua_State *L)
+{
     mtask_context_t * ctx = lua_touserdata(L, lua_upvalueindex(1));
     int fd = (int)luaL_checkinteger(L, 1);
     int id = mtask_socket_bind(ctx,fd);

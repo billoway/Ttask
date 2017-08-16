@@ -34,7 +34,7 @@
 #define SOCKET_TYPE_PACCEPT     7//accept返回的fd 未加入epoll
 #define SOCKET_TYPE_BIND        8// 其他类型的fd 如 stdin stdout等
 
-#define MAX_SOCKET (1<<MAX_SOCKET_P)    // 1 << 16 -> 64K
+#define MAX_SOCKET (1<<MAX_SOCKET_P)    // 1 << 16 -> 64K = 65536
 
 #define PRIORITY_HIGH           0
 #define PRIORITY_LOW            1
@@ -81,7 +81,7 @@ struct socket {
     struct wb_list low;
     int64_t wb_size;      // 发送缓冲区未发送的数据
     int fd;               // 对应内核分配的fd
-    int id;               // 应用层维护的一个与fd对应的id 实际上是在socket池中的id
+    int id;               // 应用层维护的一个与fd对应的id (实际上是在socket池中的 index)
     uint8_t protocol;
     uint8_t type;         // socket类型或者状态
     uint16_t udpconnecting;
@@ -370,7 +370,7 @@ socket_server_create()
 	ss->event_fd = efd;
 	ss->recvctrl_fd = fd[0];
 	ss->sendctrl_fd = fd[1];
-	ss->checkctrl = 1;
+	ss->checkctrl = 1; //default 1
 
 	for (i=0;i<MAX_SOCKET;i++) {
         //ss->slot[i]为一个struct socket
@@ -1108,7 +1108,7 @@ _set_udp_address(socket_server_t *ss, struct request_setudp *request, socket_mes
  * 绑定在调用socket_server_listen时已经发生了
  * 发包给客户端:'D'
  ******************************************************************/
-
+//检查 从写管道中发送的 本地命令（解析）
 static int
 _ctrl_cmd(socket_server_t *ss, socket_message_t *result) 
 {
@@ -1382,7 +1382,6 @@ _clear_closed_event(socket_server_t *ss, socket_message_t * result, int type)
  2、如果有事件发生，看是不是从管道过来的，如果是管道过来的就调用_ctrl_cmd去处理，如果是从 socket 描述符过来的，根据 s->type 进行相应的处理
  3、最后根据socket_server_poll的返回值调用 forward_message组装一个装有数据为mtask_socket_message_t的结构体的消息结构:mtask_message_t(消息类型为 PTYPE_SOCKET)
  4、消息结构mtask_message_t组装完毕后，调用mtask_context_push将其压入对应服务的消息队列，这样gate服务就知道远端有数据过来了。
-
  */
 int 
 socket_server_poll(socket_server_t *ss, socket_message_t * result, int * more) 
@@ -1498,7 +1497,7 @@ socket_server_poll(socket_server_t *ss, socket_message_t * result, int * more)
 		}
 	}
 }
-
+// 管道中写 命令
 static void
 _send_request(socket_server_t *ss, struct request_package *request, char type, int len)
 {
@@ -1680,7 +1679,7 @@ _do_bind(const char *host, int port, int protocol, int *family)
 		host = "0.0.0.0";	// INADDR_ANY
 	}
 	sprintf(portstr, "%d", port);
-	memset( &ai_hints, 0, sizeof( ai_hints ) );
+	memset(&ai_hints, 0, sizeof(ai_hints));
 	ai_hints.ai_family = AF_UNSPEC;
 	if (protocol == IPPROTO_TCP) {
 		ai_hints.ai_socktype = SOCK_STREAM;
@@ -1690,8 +1689,8 @@ _do_bind(const char *host, int port, int protocol, int *family)
 	}
 	ai_hints.ai_protocol = protocol;
 
-	status = getaddrinfo(host, portstr, &ai_hints, &ai_list );
-	if ( status != 0 ) {
+	status = getaddrinfo(host, portstr, &ai_hints, &ai_list);
+	if (status != 0) {
 		return -1;
 	}
 	*family = ai_list->ai_family;

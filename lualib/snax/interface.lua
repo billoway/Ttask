@@ -1,5 +1,5 @@
 local mtask = require "mtask"
-
+--首先从配置snax路径里去查找到指定的编写的snax服务，找到之后，就用loader去加载文件，这个loader默认情况下是是lua API loadfile
 local function dft_loader(path, name, G)
     local errlist = {}
 
@@ -19,7 +19,8 @@ end
 return function (name , G, loader)
        loader = loader or dft_loader
        local mainfunc
-
+--func_id再做什么呢，func_id返回的是一个空表，这个表上设置了一个元表，并重写了元表的__newindex;
+--也就是对该表新键赋值时会触发的操作，env.accept/env.response都是一个带元表的空表，这里也就是用户编写snax服务需要用到的两个表
 	local function func_id(id, group)
 		local tmp = {}
 		local function count( _, name, func)
@@ -50,7 +51,7 @@ return function (name , G, loader)
 	local temp_global = {}
 	local env = setmetatable({} , { __index = temp_global })
 	local func = {}
-
+ --func是函数最终要返回的对象，它是一个表。在do语句块里，func最终会被扩展为添加了三个system接口的数组。
 	local system = { "init", "exit", "hotfix", "profile"}
 
 	do
@@ -76,9 +77,8 @@ return function (name , G, loader)
 	end
 
 	local pattern
-
-        local path = assert(mtask.getenv "snax" , "please set snax in config file")
-        mainfunc, pattern = loader(path, name, G)
+    local path = assert(mtask.getenv "snax" , "please set snax in config file")
+    mainfunc, pattern = loader(path, name, G)
 
 	setmetatable(G,	{ __index = env , __newindex = init_system })
 	local ok, err = xpcall(mainfunc, debug.traceback)

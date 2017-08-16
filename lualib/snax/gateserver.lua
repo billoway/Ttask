@@ -1,7 +1,9 @@
 local mtask = require "mtask"
 local netpack = require "mtask.netpack"
 local socketdriver = require "mtask.socketdriver"
-
+-- gateserver中会拦截mtask_socket_message；也会拦截部分lua消息
+--（一般是由watchdog转发而来），并调用gate注册进来的回调。
+-- 注意gateserver才是mtask消息的入口，gate只不过是个回调而已
 local gateserver = {}
 
 local socket	-- listen socket
@@ -127,7 +129,7 @@ function gateserver.start(handler)
 			handler.warning(fd, size)
 		end
 	end
-
+	--gateserver会向mtask注册socket协议的处理
 	mtask.register_protocol {
 		name = "socket",
 		id = mtask.PTYPE_SOCKET,	-- PTYPE_SOCKET = 6

@@ -106,7 +106,7 @@ end
 
 send_request("handshake")
 send_request("set", { what = "hello", value = "world" })
---send_request("set", { what = "t1", value = "v3" })
+send_request("set", { what = "t1", value = "v1" })
 
 while true do
 	dispatch_package()

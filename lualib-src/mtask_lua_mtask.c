@@ -393,7 +393,9 @@ luaopen_mtask_core(lua_State *L)
         { "now", lnow }, //节点进程启动时间
 		{ NULL, NULL },
 	};
-
+   //这里先通过luaL_newlibtable创建一张表T（函数指针表l并未实际注册到表T中，只是分配了相应大小的空间）;
+   //然后从全局索引表中取出事先注册的mtask_context，接着调用luaL_setfuncs(L,l,1)，将函数表注册到T中
+   //注册时每个函数都会从栈顶取出指定数目的元素（这里为1）作为upvalue.具体看Lua 源代码	
 	luaL_newlibtable(L, l);
 
 	lua_getfield(L, LUA_REGISTRYINDEX, "mtask_context");

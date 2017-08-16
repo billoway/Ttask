@@ -58,5 +58,4 @@ function server.command_handler(command, ...)
 	local f = assert(CMD[command])
 	return f(...)
 end
-
 login(server)
