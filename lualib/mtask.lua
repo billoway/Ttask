@@ -119,7 +119,7 @@ end
 -- coroutine reuse
 
 local coroutine_pool = setmetatable({}, { __mode = "kv" })
--- 协程创建与复用函数，调用此函数总会得到一个协程
+--co_create 是从协程池找到空闲的协程来执行这个函数，没有空闲的协程则创建。
 local function co_create(f)
 	local co = table.remove(coroutine_pool)-- 从协程池取出一个协程
 	if co == nil then -- 如果没有可用的协程
@@ -128,13 +128,14 @@ local function co_create(f)
 			while true do
 				f = nil 	-- 将函数置空
 				coroutine_pool[#coroutine_pool+1] = co-- 协程执行完后，回收协程
-				f = coroutine_yield "EXIT"-- 协程执行完后，让出执行
-				f(coroutine_yield())
+				f = coroutine_yield "EXIT" -- a. yield 第一次获取函数   
+				f(coroutine_yield()) -- b. yield 第二次获取函数参数，然后执行函数f 
 			end
 		end)
 	else
-		-- 这里coroutine_resume对应的是上面的coroutine_yield "EXIT"
-		coroutine_resume(co, f)
+		-- resume 第一次让协程取到函数，就是 a点  
+        -- 之后再 resume 第二次传入参数，并执行函数，就是b点  
+		coroutine_resume(co, f)  
 	end
 	return co
 end
@@ -534,7 +535,7 @@ function mtask.dispatch(typename, func)
 	local p = proto[typename]
 	if func then  --lua类型的消息一般走这里
 		local ret = p.dispatch
-		p.dispatch = func
+		p.dispatch = func -- 设置协议的处理函数  
 		return ret
 	else
 		return p and p.dispatch
@@ -563,9 +564,6 @@ function mtask.dispatch_unknown_response(unknown)
 	return prev
 end
 
---从功能上，它等价于 mtask.timeout(0, function() func(...) end)
---但是比 timeout 高效一点。因为它并不需要向框架注册一个定时器
-
 -- 创建一个协程，协程执行func(...)函数，将协程加入fork_queue，
 -- 等待 mtask.dispatch_message 的调用
 function mtask.fork(func,...)
@@ -578,6 +576,8 @@ function mtask.fork(func,...)
 end
 -- 所有lua服务的消息处理函数(从定时器发过来的消息源地址(source)是 0) 这里的msg就是特定的数据结构体
 -- 这里的第一个参数 prototype 是同时支持 字符串与枚举类型索引的
+-- 关于proto[typename] 可以看作是对数据的封装，方便不同服务间、不同节点间，以及前后端的数据通讯，
+-- 不需要手动封包解包。默认支持lua/response/error这3个协议，还有log和debug协议，除了这几个，其他要自己调用mtask.register_protocol 注册
 local function raw_dispatch_message(prototype, msg, sz, session, source)
 	-- mtask.PTYPE_RESPONSE = 1, read mtask.h
 	if prototype == 1 then-- 处理远端发送过来的返回值
@@ -602,7 +602,7 @@ local function raw_dispatch_message(prototype, msg, sz, session, source)
 			end
 			return
 		end
-		local f = p.dispatch
+		local f = p.dispatch -- 找到dispatch函数  
 		if f then
 			local ref = watching_service[source]
 			if ref then
@@ -622,6 +622,7 @@ local function raw_dispatch_message(prototype, msg, sz, session, source)
 	end
 end
 -- lua服务的消息处理函数的最外层
+-- 首先是将msg交由raw_dispatch_message作分发，然后开始处理fork_queue中缓存的fork协程
 function mtask.dispatch_message(...)
 	local succ, err = pcall(raw_dispatch_message,...)
 	while true do
@@ -630,6 +631,7 @@ function mtask.dispatch_message(...)
 			break
 		end
 		fork_queue[key] = nil
+		--重点理解:
 		local fork_succ, fork_err = pcall(suspend,co,coroutine_resume(co))
 		if not fork_succ then
 			if succ then
@@ -764,15 +766,7 @@ function mtask.init_service(start)
 		mtask.send(".launcher","lua", "LAUNCHOK")
 	end
 end
---每个 mtask 服务都必须有一个启动函数。
---这一点和普通 Lua 脚本不同，传统的 Lua 脚本是没有专门的主函数，脚本本身即是主函数。
---而 mtask 服务，你必须主动调用 mtask.start(function() ... end) 。
 
---当然你还是可以在脚本中随意写一段 Lua 代码，它们会先于 start 函数执行。
---但是，不要在外面调用 mtask 的阻塞 API ，因为框架将无法唤醒它们。
-
---如果你想在 mtask.start 注册的函数之前做点什么，可以调用 mtask.init(function() ... end) 。这通常用于 lua 库的编写.
---你需要编写的服务引用你的库的时候，事先调用一些 mtask 阻塞 API ，就可以用 mtask.init 把这些工作注册在 start 之前.
 function mtask.start(start_func)
 	c.callback(mtask.dispatch_message)
 	mtask.timeout(0, function()

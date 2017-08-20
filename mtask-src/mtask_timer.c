@@ -238,7 +238,7 @@ mtask_timeout(uint32_t handle, int time, int session)
 		message.session = session;
 		message.data = NULL;
 		message.sz = (size_t)PTYPE_RESPONSE << MESSAGE_TYPE_SHIFT;
-
+        // 如果time为0,把超时事件压到服务的消息队列，等待调度处理
 		if (mtask_context_push(handle, &message)) {
 			return -1;
 		}
@@ -246,6 +246,7 @@ mtask_timeout(uint32_t handle, int time, int session)
 		struct timer_event event;
 		event.handle = handle;
 		event.session = session;
+        // time不为0，超时事件挂到时间轮上，等待超时处理
 		timer_add(TI, &event, sizeof(event), time);
 	}
 

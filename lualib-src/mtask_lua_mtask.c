@@ -40,6 +40,7 @@ _cb(mtask_context_t * context, void * ud, int type, int session, uint32_t source
 	int top = lua_gettop(L);
 	if (top == 0) {
 		lua_pushcfunction(L, traceback);
+        //从全局表中取到关联的LUA回调, 也就是 (Lua 函数 mtask.dispatch_message).
 		lua_rawgetp(L, LUA_REGISTRYINDEX, _cb);
 	} else {
 		assert(top == 2);
@@ -88,6 +89,7 @@ forward_cb(mtask_context_t * context, void * ud, int type, int session, uint32_t
 }
 //设置mtask_context总的cb和cb_ud 分别为_cb何lua_state 同时记录lua_function到注册表中
 //主要用来注册lua服务的消息处理函数
+//以函数_cb为key，LUA回调（mtask.dispatch_message）作为value被注册到全局注册表中
 static int
 lcallback(lua_State *L)
 {
@@ -98,13 +100,15 @@ lcallback(lua_State *L)
 	lua_rawsetp(L, LUA_REGISTRYINDEX, _cb);
     //等价于 t[k] = v ， 这里的 t 是指给定索引处的表， k 是指针 p 对应的轻量用户数据。 而 v 是栈顶的值。
     //void lua_rawsetp (lua_State *L, int index, const void *p);
-    //_G[LUA_REGISTRYINDEX] [_cb] = L[1], 相当于将栈顶出的函数设置在注册表中，并且使用_cb作为key L[1]出栈
-    
+    //_G[LUA_REGISTRYINDEX] [_cb] = L[1], 相当于将栈顶处的函数设置在注册表中，并且使用 _cb 作为key L[1]出栈
     //LUA_RIDX_MAINTHREAD 注册表中这个索引下是状态机的主线程
-	lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);//G[LUA_REGISTRYINDEX][LUA_RIDX_MAINTHREAD]值入栈 注册表中 key为LUA_RIDX_MAINTHREAD的值入栈
+    //G[LUA_REGISTRYINDEX][LUA_RIDX_MAINTHREAD]值入栈 注册表中 key为LUA_RIDX_MAINTHREAD的值入栈
+	lua_rawgeti(L, LUA_REGISTRYINDEX, LUA_RIDX_MAINTHREAD);
     //栈顶的值转换为lua_state  lua_tothread把给定索引处的值转换为一个 Lua 线程 （表示为 lua_State*）。
 	lua_State *gL = lua_tothread(L,-1);
 
+    //mtask_context_t 接收到消息后会转发给context->cb处理（也就是_cb函数）
+    //在_cb中，从全局表中取到关联的LUA回调，将type, msg, sz, session, source压栈调用
 	if (forward) {
         //mtask_context.cb设置为forward_cb  mtask_context.cb_ud设置为主线程
 		mtask_callback(context, gL, forward_cb);

@@ -8,6 +8,14 @@ local builder = {}
 local cache = {}
 local dataset = {}
 local address
+
+local  unique_id = 0
+
+local function unique_string(str)
+ 	unique_id = unique_id + 1
+	return return str .. ("." .. tostring(unique_id))
+end
+
 local function monitor(pointer)
 	mtask.fork(function()
 		mtask.call(address, "lua", "collect", pointer)
@@ -30,7 +38,7 @@ end
 
 function builder.new(name, v)
 	assert(dataset[name] == nil)
-	local datastring = dumpsheet(v)
+	local datastring = unique_string(dumpsheet(v))
 	local pointer = core.stringpointer(datastring)
 	mtask.call(address, "lua", "update", name, pointer)
 	cache[datastring] = pointer

@@ -10,7 +10,7 @@ local main, pattern
 local err = {}
 for pat in string.gmatch(LUA_SERVICE, "([^;]+);*") do
 	local filename = string.gsub(pat, "?", SERVICE_NAME)
-	local f, msg = loadfile(filename)
+	local f, msg = loadfile(filename)  -- 加载服务(Lua)代码
 	if not f then
 		table.insert(err, msg)
 	else
@@ -45,4 +45,4 @@ if LUA_PRELOAD then
 	LUA_PRELOAD = nil
 end
 --print("loader.lua  loadfile OK!")
-main(select(2, table.unpack(args)))
+main(select(2, table.unpack(args)))-- 执行服务代码 
