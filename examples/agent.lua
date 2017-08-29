@@ -13,19 +13,23 @@ local REQUEST = {}
 local client_fd
 
 function REQUEST:get()
+	mtask.error(string.format("get %s", self.what))
 	local r = mtask.call("SIMPLEDB", "lua", "get", self.what)
 	return { result = r }
 end
 
 function REQUEST:set()
+	mtask.error(string.format("set %s %s",self.what,self.value))
 	local r = mtask.call("SIMPLEDB", "lua", "set", self.what, self.value)
 end
 
 function REQUEST:handshake()
+	mtask.error("handshake")
 	return { msg = "Welcome to mtask, I will send heartbeat every 5 sec." }
 end
 
 function REQUEST:quit()
+	mtask.error("quit")
 	mtask.call(WATCHDOG, "lua", "close", client_fd)
 end
 
@@ -74,8 +78,9 @@ function CMD.start(conf)
 	send_request = host:attach(sprotoloader.load(2))
 	mtask.fork(function()
 		while true do
+			mtask.error("heart  beat ...")
 			send_package(send_request "heartbeat")
-			mtask.sleep(500)
+			mtask.sleep(1000)--500
 		end
 	end)
 

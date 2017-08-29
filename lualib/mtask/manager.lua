@@ -64,8 +64,11 @@ function mtask.forward_type(map, start_func)
 		if prototype then
 			dispatch_message(prototype, msg, sz, ...)
 		else
-			dispatch_message(ptype, msg, sz, ...)
+			local ok, err = pcall(dispatch_message, ptype, msg, sz, ...)
 			c.trash(msg, sz)
+			if not ok then
+				error(err)
+			end
 		end
 	end, true)
 	mtask.timeout(0, function()
