@@ -449,7 +449,6 @@ push_socket_data(struct harbor *h, const mtask_socket_message_t * message)
 		}
 	}
 	if (s == NULL) {
-		mtask_free(message->buffer);
 		mtask_error(h->ctx, "Invalid socket fd (%d) data", fd);
 		return;
 	}
