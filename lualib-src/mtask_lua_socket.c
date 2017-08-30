@@ -257,7 +257,8 @@ lpopbuffer(lua_State *L)
 	table pool
  */
 static int
-lclearbuffer(lua_State *L) {
+lclearbuffer(lua_State *L)
+{
     struct socket_buffer * sb = lua_touserdata(L, 1);
     if (sb == NULL) {
         if (lua_isnil(L, 1)) {
