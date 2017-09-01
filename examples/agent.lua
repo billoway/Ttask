@@ -79,8 +79,8 @@ function CMD.start(conf)
 	mtask.fork(function()
 		while true do
 			mtask.error("heart  beat ...")
-			send_package(send_request "heartbeat")
-			mtask.sleep(1000)--500
+			send_package(send_request("heartbeat",{ok = "heartbeat"}))
+			mtask.sleep(500)--500
 		end
 	end)
 
