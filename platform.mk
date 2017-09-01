@@ -33,8 +33,8 @@ linux freebsd : MTASK_LIBS += -lrt
 
 # Turn off jemalloc and malloc hook on macosx
 
-#macosx : MALLOC_STATICLIB :=
-#macosx : MTASK_DEFINES :=-DNOUSE_JEMALLOC
+macosx : MALLOC_STATICLIB :=
+macosx : MTASK_DEFINES :=-DNOUSE_JEMALLOC
 
 
 linux macosx freebsd :

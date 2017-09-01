@@ -16,7 +16,7 @@ typedef struct mtask_message_s mtask_message_t;
 
 // type is encoding in mtask_message.sz high 8bit
 #define MESSAGE_TYPE_MASK (SIZE_MAX >> 8)
-#define MESSAGE_TYPE_SHIFT ((sizeof(size_t)-1) * 8)
+#define MESSAGE_TYPE_SHIFT ((sizeof(size_t)-1) * 8) //56
 
 typedef struct message_queue_s message_queue_t;//消息队列
 //压入全局队列
