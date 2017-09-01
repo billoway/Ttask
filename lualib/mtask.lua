@@ -644,16 +644,7 @@ function mtask.dispatch_message(...)
 	end
 	assert(succ, tostring(err))
 end
---阻塞 API
---用于启动一个新的 Lua 服务.
---name 是脚本的名字（不用写 .lua 后缀）。
---只有被启动的脚本的 start 函数返回后，这个 API 才会返回启动的服务的地址.
---如果被启动的脚本在初始化环节抛出异常，或在初始化完成前就调用 mtask.exit 退出，｀mtask.newservice` 都会抛出异常。
---如果被启动的脚本的 start 函数是一个永不结束的循环，那么 newservice 也会被永远阻塞住。
---注意：启动参数其实是以字符串拼接的方式传递过去的.
 
---目前推荐的惯例是，让你的服务响应一个启动消息。
---在 newservice 之后，立刻调用 mtask.call 发送启动请求
 function mtask.newservice(name, ...)
 	-- .launcher 服务就是 launcher.lua
 	return mtask.call(".launcher", "lua" , "LAUNCH", "snlua", name, ...)
